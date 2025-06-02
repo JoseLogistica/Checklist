@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inspección Turbinas Eólicas - Producción</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.39.0/umd/supabase.min.js"></script>
+    <title>Sistema de Inspección de Turbinas - Debug</title>
     <style>
         * {
             margin: 0;
@@ -14,1012 +13,557 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
             padding: 20px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
             overflow: hidden;
         }
 
         .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 30px;
             text-align: center;
-            position: relative;
         }
 
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="20" cy="20" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="30" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>');
-            opacity: 0.3;
+        .debug-info {
+            background: #fef3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 5px;
         }
 
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 300;
+        .debug-info h3 {
+            color: #856404;
             margin-bottom: 10px;
-            position: relative;
-            z-index: 1;
         }
 
-        .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            position: relative;
-            z-index: 1;
-        }
-
-        .connection-status {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            z-index: 2;
-        }
-
-        .connected {
-            background: #27ae60;
-            color: white;
-        }
-
-        .disconnected {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            padding: 30px;
-        }
-
-        .form-section {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .form-section:hover {
-            transform: translateY(-5px);
-        }
-
-        .section-title {
-            font-size: 1.5rem;
-            color: #2c3e50;
-            margin-bottom: 25px;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #3498db;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .connection-test {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 10px;
+            border: 2px solid #dee2e6;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin: 20px;
         }
 
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             font-weight: 600;
-            color: #2c3e50;
-            font-size: 1rem;
+            color: #333;
         }
 
         input, select, textarea {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e1e8ed;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: #f8f9fa;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
         }
 
         input:focus, select:focus, textarea:focus {
             outline: none;
-            border-color: #3498db;
-            background: white;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.2);
-        }
-
-        .checkbox-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 10px;
-        }
-
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .checkbox-item:hover {
-            background: #e9ecef;
-            transform: translateY(-2px);
-        }
-
-        .checkbox-item input[type="checkbox"] {
-            width: auto;
-            margin: 0;
-            transform: scale(1.2);
-        }
-
-        .checkbox-item.checked {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-        }
-
-        .priority-group {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .priority-item {
-            text-align: center;
-            padding: 12px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-
-        .priority-item.alta {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
-        }
-
-        .priority-item.media {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-            color: white;
-        }
-
-        .priority-item.baja {
-            background: linear-gradient(135deg, #27ae60, #229954);
-            color: white;
-        }
-
-        .priority-item.selected {
-            border-color: #2c3e50;
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .photo-upload {
-            border: 2px dashed #3498db;
-            border-radius: 10px;
-            padding: 30px;
-            text-align: center;
-            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .photo-upload:hover {
-            border-color: #2980b9;
-            background: linear-gradient(45deg, #e9ecef, #dee2e6);
-        }
-
-        .photo-upload.dragover {
-            border-color: #27ae60;
-            background: linear-gradient(45deg, #d5f4e6, #a8e6cf);
-        }
-
-        .photo-preview {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .photo-item {
-            position: relative;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .photo-item:hover {
-            transform: scale(1.05);
-        }
-
-        .photo-item img {
-            width: 100%;
-            height: 120px;
-            object-fit: cover;
-        }
-
-        .photo-item .remove-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            border-color: #667eea;
         }
 
         .btn {
-            background: linear-gradient(135deg, #3498db, #2980b9);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            padding: 12px 30px;
             border: none;
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            font-weight: 600;
+            border-radius: 8px;
+            font-size: 16px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
-            margin-top: 20px;
-            position: relative;
+            transition: transform 0.2s;
+            margin: 10px;
         }
 
         .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(52, 152, 219, 0.3);
+            transform: translateY(-2px);
         }
 
-        .btn:active {
-            transform: translateY(-1px);
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
         }
 
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
         }
 
-        .btn .loading {
-            display: none;
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
         }
 
-        .btn.loading .loading {
-            display: inline;
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
 
-        .btn.loading .text {
-            display: none;
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
 
-        .inspections-list {
-            max-height: 500px;
-            overflow-y: auto;
+        .status.info {
+            background: #cce7ff;
+            color: #0056b3;
+            border: 1px solid #b3d9ff;
         }
 
-        .inspection-card {
-            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 15px;
-            border-left: 5px solid #3498db;
-            transition: all 0.3s ease;
-        }
-
-        .inspection-card:hover {
-            transform: translateX(5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .inspection-header {
+        .tabs {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
         }
 
-        .inspection-model {
-            font-weight: bold;
-            color: #2c3e50;
-            font-size: 1.1rem;
-        }
-
-        .inspection-priority {
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-
-        .inspection-priority.alta {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .inspection-priority.media {
-            background: #f39c12;
-            color: white;
-        }
-
-        .inspection-priority.baja {
-            background: #27ae60;
-            color: white;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #ffffff, #f8f9fa);
-            padding: 25px;
-            border-radius: 15px;
+        .tab {
+            flex: 1;
+            padding: 15px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
         }
 
-        .stat-card:hover {
-            transform: translateY(-5px);
+        .tab.active {
+            background: white;
+            border-bottom-color: #667eea;
         }
 
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #3498db;
-            margin-bottom: 10px;
+        .tab-content {
+            display: none;
+            padding: 20px;
         }
 
-        .stat-label {
-            color: #7f8c8d;
-            font-size: 1rem;
+        .tab-content.active {
+            display: block;
         }
 
-        .alert {
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-
-        .alert.success {
-            background: #d5f4e6;
-            color: #27ae60;
-            border-left: 4px solid #27ae60;
-        }
-
-        .alert.error {
-            background: #fadbd8;
-            color: #e74c3c;
-            border-left: 4px solid #e74c3c;
-        }
-
-        .config-section {
+        .credentials-form {
             background: #f8f9fa;
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 20px;
-            border: 2px dashed #3498db;
         }
 
-        .config-input {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .config-input input {
-            flex: 1;
-        }
-
-        .config-input button {
-            padding: 12px 20px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-                gap: 20px;
-                padding: 20px;
-            }
-
-            .header h1 {
-                font-size: 1.8rem;
-            }
-
-            .connection-status {
-                position: static;
-                display: inline-block;
-                margin-top: 10px;
-            }
-
-            .checkbox-group {
-                grid-template-columns: 1fr;
-            }
-
-            .priority-group {
-                grid-template-columns: 1fr;
-            }
-
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 10px;
-            }
-
-            .form-section {
-                padding: 20px;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-            }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+            border-left: 4px solid #007bff;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="connection-status" id="connectionStatus">🔌 Configurando...</div>
-            <h1>🌪️ Inspección Turbinas Eólicas</h1>
-            <p>Sistema de Control de Calidad - Fibras y Componentes</p>
+            <h1>🔧 Sistema de Inspección - Modo Debug</h1>
+            <p>Herramienta para diagnosticar problemas de conexión</p>
         </div>
 
-        <div class="main-content">
-            <div class="form-section">
-                <h2 class="section-title">
-                    ⚙️ Configuración Base de Datos
-                </h2>
-                
-                <div class="config-section" id="configSection">
-                    <p><strong>Configura tu base de datos Supabase:</strong></p>
-                    <div class="config-input">
-                        <input type="url" id="supabaseUrl" placeholder="https://tu-proyecto.supabase.co">
-                        <input type="text" id="supabaseKey" placeholder="Tu clave pública de Supabase">
-                        <button onclick="connectDatabase()">Conectar</button>
-                    </div>
-                    <small>💡 Obtén estas credenciales de tu panel de Supabase > Settings > API</small>
+        <div class="debug-info">
+            <h3>ℹ️ Información de Debug</h3>
+            <p>Esta versión te ayudará a identificar exactamente cuál es el problema de conexión con Supabase.</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('test')">🔍 Test Conexión</div>
+            <div class="tab" onclick="showTab('inspect')">📋 Inspección</div>
+            <div class="tab" onclick="showTab('data')">📊 Datos</div>
+        </div>
+
+        <div id="test-tab" class="tab-content active">
+            <div class="credentials-form">
+                <h3>Configuración de Supabase</h3>
+                <div class="form-group">
+                    <label>URL del proyecto Supabase:</label>
+                    <input type="url" id="supabaseUrl" placeholder="https://tuproyecto.supabase.co">
+                    <small>Ejemplo: https://abcdefghijk.supabase.co (sin barra al final)</small>
                 </div>
-
-                <div id="alertContainer"></div>
-
-                <h2 class="section-title">
-                    📋 Nueva Inspección
-                </h2>
-
-                <form id="inspectionForm">
-                    <div class="form-group">
-                        <label for="inspector">Inspector:</label>
-                        <input type="text" id="inspector" required placeholder="Nombre del inspector">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="modelo">Modelo:</label>
-                        <input type="text" id="modelo" required placeholder="Modelo de la turbina">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="trazabilidad">Trazabilidad:</label>
-                        <input type="text" id="trazabilidad" required placeholder="Código de trazabilidad">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Piezas a Revisar:</label>
-                        <div class="checkbox-group">
-                            <div class="checkbox-item" onclick="toggleCheckbox(this, 'fondo')">
-                                <input type="checkbox" id="fondo" value="fondo">
-                                <span>🔧 Fondo</span>
-                            </div>
-                            <div class="checkbox-item" onclick="toggleCheckbox(this, 'buje')">
-                                <input type="checkbox" id="buje" value="buje">
-                                <span>⚙️ Buje</span>
-                            </div>
-                            <div class="checkbox-item" onclick="toggleCheckbox(this, 'carcasa')">
-                                <input type="checkbox" id="carcasa" value="carcasa">
-                                <span>🏠 Carcasa</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Prioridad:</label>
-                        <div class="priority-group">
-                            <div class="priority-item alta" onclick="selectPriority('alta')">
-                                <div>🔴 ALTA</div>
-                            </div>
-                            <div class="priority-item media" onclick="selectPriority('media')">
-                                <div>🟡 MEDIA</div>
-                            </div>
-                            <div class="priority-item baja" onclick="selectPriority('baja')">
-                                <div>🟢 BAJA</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="observaciones">Observaciones:</label>
-                        <textarea id="observaciones" rows="4" placeholder="Detalles de la inspección, defectos encontrados, recomendaciones..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Fotos:</label>
-                        <div class="photo-upload" id="photoUpload">
-                            <div>📷 Haz clic o arrastra fotos aquí</div>
-                            <div style="font-size: 0.9rem; margin-top: 10px; opacity: 0.7;">Máximo 10 fotos</div>
-                        </div>
-                        <input type="file" id="photoInput" multiple accept="image/*" style="display: none;">
-                        <div class="photo-preview" id="photoPreview"></div>
-                    </div>
-
-                    <button type="submit" class="btn" id="submitBtn">
-                        <span class="loading">⏳ Guardando...</span>
-                        <span class="text">✅ Guardar Inspección</span>
-                    </button>
-                </form>
+                <div class="form-group">
+                    <label>Clave pública (anon key):</label>
+                    <input type="text" id="supabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                    <small>Una cadena muy larga que empieza con "eyJ"</small>
+                </div>
+                <button class="btn" onclick="testConnection()">🔗 Probar Conexión</button>
+                <button class="btn btn-success" onclick="saveCredentials()">💾 Guardar Configuración</button>
             </div>
 
-            <div class="form-section">
-                <h2 class="section-title">
-                    📊 Inspecciones Registradas
-                </h2>
+            <div id="connectionStatus"></div>
 
-                <div class="stats">
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalInspections">0</div>
-                        <div class="stat-label">Total</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="highPriorityInspections">0</div>
-                        <div class="stat-label">Alta Prioridad</div>
-                    </div>
-                </div>
-
-                <div class="inspections-list" id="inspectionsList">
-                    <div style="text-align: center; padding: 40px; color: #7f8c8d;">
-                        Configura la base de datos para ver las inspecciones
-                    </div>
+            <div class="connection-test">
+                <h3>Pasos de verificación:</h3>
+                <div id="checkResults">
+                    <div class="status info">⏳ Esperando credenciales...</div>
                 </div>
             </div>
+        </div>
+
+        <div id="inspect-tab" class="tab-content">
+            <form id="inspectionForm">
+                <div class="form-group">
+                    <label>Inspector:</label>
+                    <input type="text" id="inspector" required>
+                </div>
+                <div class="form-group">
+                    <label>Modelo de Turbina:</label>
+                    <input type="text" id="modelo" required>
+                </div>
+                <div class="form-group">
+                    <label>Número de Trazabilidad:</label>
+                    <input type="text" id="trazabilidad" required>
+                </div>
+                <div class="form-group">
+                    <label>Piezas Inspeccionadas:</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+                        <label><input type="checkbox" name="piezas" value="Palas"> Palas</label>
+                        <label><input type="checkbox" name="piezas" value="Rotor"> Rotor</label>
+                        <label><input type="checkbox" name="piezas" value="Generador"> Generador</label>
+                        <label><input type="checkbox" name="piezas" value="Torre"> Torre</label>
+                        <label><input type="checkbox" name="piezas" value="Cimientos"> Cimientos</label>
+                        <label><input type="checkbox" name="piezas" value="Sistema eléctrico"> Sistema eléctrico</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Prioridad:</label>
+                    <select id="prioridad" required>
+                        <option value="">Seleccionar...</option>
+                        <option value="alta">🔴 Alta</option>
+                        <option value="media">🟡 Media</option>
+                        <option value="baja">🟢 Baja</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Observaciones:</label>
+                    <textarea id="observaciones" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Fotos:</label>
+                    <input type="file" id="fotos" multiple accept="image/*">
+                </div>
+                <button type="submit" class="btn btn-success">📝 Guardar Inspección</button>
+            </form>
+        </div>
+
+        <div id="data-tab" class="tab-content">
+            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                <button class="btn" onclick="loadInspections()">🔄 Recargar Datos</button>
+                <button class="btn btn-danger" onclick="clearLocalData()">🗑️ Limpiar Datos Locales</button>
+            </div>
+            <div id="inspectionsList"></div>
         </div>
     </div>
 
     <script>
         let supabase = null;
-        let selectedPriority = '';
-        let selectedPhotos = [];
-        let isConnected = false;
+        let connectionStatus = 'disconnected';
+        let supabaseLoaded = false;
 
-        // Intentar cargar configuración guardada
-        function loadSavedConfig() {
-            const savedUrl = localStorage.getItem('supabaseUrl');
-            const savedKey = localStorage.getItem('supabaseKey');
+        // Función para cargar Supabase de forma dinámica
+        function loadSupabase() {
+            return new Promise((resolve, reject) => {
+                if (supabaseLoaded) {
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/@supabase/supabase-js@2';
+                script.onload = () => {
+                    supabaseLoaded = true;
+                    console.log('Supabase cargado correctamente');
+                    resolve();
+                };
+                script.onerror = (error) => {
+                    console.error('Error cargando Supabase:', error);
+                    reject(error);
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // Cargar credenciales guardadas
+        async function loadSavedCredentials() {
+            const url = localStorage.getItem('supabase_url');
+            const key = localStorage.getItem('supabase_key');
+            if (url) document.getElementById('supabaseUrl').value = url;
+            if (key) document.getElementById('supabaseKey').value = key;
             
-            if (savedUrl && savedKey) {
-                document.getElementById('supabaseUrl').value = savedUrl;
-                document.getElementById('supabaseKey').value = savedKey;
-                connectDatabase();
+            if (url && key) {
+                await initSupabase(url, key);
             }
         }
 
-        // Conectar a la base de datos
-        async function connectDatabase() {
+        async function saveCredentials() {
             const url = document.getElementById('supabaseUrl').value.trim();
             const key = document.getElementById('supabaseKey').value.trim();
             
             if (!url || !key) {
-                showAlert('Por favor, introduce la URL y la clave de Supabase', 'error');
+                showStatus('error', 'Por favor, completa ambos campos');
                 return;
             }
+            
+            localStorage.setItem('supabase_url', url);
+            localStorage.setItem('supabase_key', key);
+            
+            showStatus('success', 'Credenciales guardadas correctamente');
+            const success = await initSupabase(url, key);
+            if (success) {
+                showStatus('success', 'Conexión configurada y lista para usar');
+            }
+        }
 
+        async function initSupabase(url, key) {
             try {
-                // Crear cliente de Supabase
-                supabase = window.supabase.createClient(url, key);
+                await loadSupabase();
                 
-                // Probar la conexión
+                if (!window.supabase) {
+                    throw new Error('Supabase no se cargó correctamente');
+                }
+                
+                supabase = window.supabase.createClient(url, key);
+                showStatus('success', 'Cliente Supabase inicializado correctamente');
+                return true;
+            } catch (error) {
+                showStatus('error', 'Error al inicializar Supabase: ' + error.message);
+                return false;
+            }
+        }
+
+        async function testConnection() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+            
+            const checkResults = document.getElementById('checkResults');
+            checkResults.innerHTML = '';
+            
+            // Verificación 0: Cargar Supabase
+            addCheckResult('⏳ Cargando librería Supabase...', 'info');
+            
+            try {
+                await loadSupabase();
+                addCheckResult('✅ Librería Supabase cargada', 'success');
+            } catch (error) {
+                addCheckResult('❌ Error cargando Supabase: ' + error.message, 'error');
+                addCheckResult('💡 Intenta usar otra conexión a internet o VPN', 'info');
+                return;
+            }
+            
+            // Verificación 1: Formato de URL
+            if (!url) {
+                addCheckResult('❌ URL vacía', 'error');
+                return;
+            }
+            
+            if (!url.startsWith('https://')) {
+                addCheckResult('❌ URL debe empezar con https://', 'error');
+                return;
+            }
+            
+            if (url.endsWith('/')) {
+                addCheckResult('⚠️ URL no debe terminar con barra (/)', 'error');
+                return;
+            }
+            
+            addCheckResult('✅ Formato de URL correcto', 'success');
+            
+            // Verificación 2: Formato de clave
+            if (!key) {
+                addCheckResult('❌ Clave vacía', 'error');
+                return;
+            }
+            
+            if (!key.startsWith('eyJ')) {
+                addCheckResult('❌ La clave debe empezar con "eyJ"', 'error');
+                return;
+            }
+            
+            addCheckResult('✅ Formato de clave correcto', 'success');
+            
+            // Verificación 3: Inicializar cliente
+            try {
+                if (!window.supabase) {
+                    throw new Error('Supabase no está disponible');
+                }
+                
+                supabase = window.supabase.createClient(url, key);
+                addCheckResult('✅ Cliente Supabase creado', 'success');
+            } catch (error) {
+                addCheckResult('❌ Error creando cliente: ' + error.message, 'error');
+                return;
+            }
+            
+            // Verificación 4: Conectividad básica
+            try {
+                addCheckResult('⏳ Probando conectividad...', 'info');
+                
                 const { data, error } = await supabase
                     .from('inspecciones')
-                    .select('count')
-                    .limit(1);
-
+                    .select('count', { count: 'exact', head: true });
+                
                 if (error) {
-                    throw error;
-                }
-
-                // Guardar configuración
-                localStorage.setItem('supabaseUrl', url);
-                localStorage.setItem('supabaseKey', key);
-                
-                isConnected = true;
-                updateConnectionStatus(true);
-                hideConfigSection();
-                loadInspections();
-                showAlert('✅ Conectado correctamente a la base de datos', 'success');
-                
-            } catch (error) {
-                console.error('Error de conexión:', error);
-                updateConnectionStatus(false);
-                showAlert('❌ Error de conexión: ' + error.message, 'error');
-            }
-        }
-
-        function updateConnectionStatus(connected) {
-            const status = document.getElementById('connectionStatus');
-            if (connected) {
-                status.textContent = '🟢 Conectado';
-                status.className = 'connection-status connected';
-            } else {
-                status.textContent = '🔴 Desconectado';
-                status.className = 'connection-status disconnected';
-            }
-        }
-
-        function hideConfigSection() {
-            document.getElementById('configSection').style.display = 'none';
-        }
-
-        function showAlert(message, type) {
-            const container = document.getElementById('alertContainer');
-            const alert = document.createElement('div');
-            alert.className = `alert ${type}`;
-            alert.textContent = message;
-            container.innerHTML = '';
-            container.appendChild(alert);
-            
-            // Auto-hide después de 5 segundos
-            setTimeout(() => {
-                alert.remove();
-            }, 5000);
-        }
-
-        // Toggle checkbox con animación
-        function toggleCheckbox(element, checkboxId) {
-            const checkbox = document.getElementById(checkboxId);
-            checkbox.checked = !checkbox.checked;
-            
-            if (checkbox.checked) {
-                element.classList.add('checked');
-            } else {
-                element.classList.remove('checked');
-            }
-        }
-
-        // Seleccionar prioridad
-        function selectPriority(priority) {
-            document.querySelectorAll('.priority-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            
-            event.target.closest('.priority-item').classList.add('selected');
-            selectedPriority = priority;
-        }
-
-        // Manejo de fotos
-        document.getElementById('photoUpload').addEventListener('click', () => {
-            document.getElementById('photoInput').click();
-        });
-
-        document.getElementById('photoInput').addEventListener('change', handlePhotoSelection);
-
-        // Drag and drop para fotos
-        const photoUpload = document.getElementById('photoUpload');
-
-        photoUpload.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            photoUpload.classList.add('dragover');
-        });
-
-        photoUpload.addEventListener('dragleave', () => {
-            photoUpload.classList.remove('dragover');
-        });
-
-        photoUpload.addEventListener('drop', (e) => {
-            e.preventDefault();
-            photoUpload.classList.remove('dragover');
-            
-            const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
-            addPhotos(files);
-        });
-
-        function handlePhotoSelection(event) {
-            const files = Array.from(event.target.files);
-            addPhotos(files);
-        }
-
-        function addPhotos(files) {
-            if (selectedPhotos.length + files.length > 10) {
-                showAlert('Máximo 10 fotos permitidas', 'error');
-                return;
-            }
-
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    selectedPhotos.push({
-                        name: file.name,
-                        data: e.target.result,
-                        file: file
-                    });
-                    updatePhotoPreview();
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function updatePhotoPreview() {
-            const preview = document.getElementById('photoPreview');
-            preview.innerHTML = '';
-
-            selectedPhotos.forEach((photo, index) => {
-                const photoDiv = document.createElement('div');
-                photoDiv.className = 'photo-item';
-                photoDiv.innerHTML = `
-                    <img src="${photo.data}" alt="${photo.name}">
-                    <button class="remove-btn" onclick="removePhoto(${index})">×</button>
-                `;
-                preview.appendChild(photoDiv);
-            });
-        }
-
-        function removePhoto(index) {
-            selectedPhotos.splice(index, 1);
-            updatePhotoPreview();
-        }
-
-        // Subir foto a Supabase Storage
-        async function uploadPhoto(file, inspectionId) {
-            const fileName = `${inspectionId}_${Date.now()}_${file.name}`;
-            const filePath = `inspecciones/${fileName}`;
-
-            const { data, error } = await supabase.storage
-                .from('fotos-inspecciones')
-                .upload(filePath, file);
-
-            if (error) {
-                throw error;
-            }
-
-            // Obtener URL pública
-            const { data: { publicUrl } } = supabase.storage
-                .from('fotos-inspecciones')
-                .getPublicUrl(filePath);
-
-            return {
-                fileName: fileName,
-                publicUrl: publicUrl
-            };
-        }
-
-        // Enviar formulario
-        document.getElementById('inspectionForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            if (!isConnected) {
-                showAlert('Primero debes conectar la base de datos', 'error');
-                return;
-            }
-
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.classList.add('loading');
-
-            try {
-                const inspector = document.getElementById('inspector').value;
-                const modelo = document.getElementById('modelo').value;
-                const trazabilidad = document.getElementById('trazabilidad').value;
-                const observaciones = document.getElementById('observaciones').value;
-
-                const piezasSeleccionadas = [];
-                ['fondo', 'buje', 'carcasa'].forEach(pieza => {
-                    if (document.getElementById(pieza).checked) {
-                        piezasSeleccionadas.push(pieza);
+                    if (error.code === 'PGRST116') {
+                        addCheckResult('❌ Tabla "inspecciones" no existe. Ejecuta el SQL de creación', 'error');
+                        addCheckResult('💡 Ve a Supabase → SQL Editor y ejecuta el código SQL', 'info');
+                    } else {
+                        addCheckResult('❌ Error de base de datos: ' + error.message, 'error');
                     }
-                });
-
-                if (piezasSeleccionadas.length === 0) {
-                    showAlert('Selecciona al menos una pieza a revisar', 'error');
                     return;
                 }
-
-                if (!selectedPriority) {
-                    showAlert('Selecciona una prioridad', 'error');
-                    return;
-                }
-
-                // Insertar inspección en la base de datos
-                const { data: inspection, error: inspectionError } = await supabase
-                    .from('inspecciones')
-                    .insert([{
-                        inspector,
-                        modelo,
-                        trazabilidad,
-                        piezas: piezasSeleccionadas,
-                        prioridad: selectedPriority,
-                        observaciones
-                    }])
-                    .select()
-                    .single();
-
-                if (inspectionError) {
-                    throw inspectionError;
-                }
-
-                // Subir fotos si hay alguna
-                if (selectedPhotos.length > 0) {
-                    const photoPromises = selectedPhotos.map(async (photo) => {
-                        const uploadResult = await uploadPhoto(photo.file, inspection.id);
-                        
-                        // Guardar referencia de la foto en la base de datos
-                        const { error: photoError } = await supabase
-                            .from('fotos')
-                            .insert([{
-                                inspeccion_id: inspection.id,
-                                nombre_archivo: uploadResult.fileName,
-                                url_archivo: uploadResult.publicUrl
-                            }]);
-
-                        if (photoError) {
-                            throw photoError;
-                        }
-
-                        return uploadResult;
-                    });
-
-                    await Promise.all(photoPromises);
-                }
-
-                // Limpiar formulario
-                document.getElementById('inspectionForm').reset();
-                document.querySelectorAll('.checkbox-item').forEach(item => {
-                    item.classList.remove('checked');
-                });
-                document.querySelectorAll('.priority-item').forEach(item => {
-                    item.classList.remove('selected');
-                });
-                selectedPriority = '';
-                selectedPhotos = [];
-                updatePhotoPreview();
-
-                showAlert('✅ Inspección guardada correctamente', 'success');
-                loadInspections();
-
+                
+                addCheckResult('✅ Conexión exitosa con la base de datos', 'success');
+                addCheckResult(`ℹ️ Registros en la tabla: ${data || 0}`, 'info');
+                connectionStatus = 'connected';
+                
             } catch (error) {
-                console.error('Error:', error);
-                showAlert('❌ Error al guardar: ' + error.message, 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('loading');
+                if (error.message.includes('fetch')) {
+                    addCheckResult('❌ Error de red. Verifica tu conexión a internet', 'error');
+                } else {
+                    addCheckResult('❌ Error inesperado: ' + error.message, 'error');
+                }
+            }
+        }
+
+        function addCheckResult(message, type) {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            document.getElementById('checkResults').appendChild(div);
+        }
+
+        function showStatus(type, message) {
+            const status = document.getElementById('connectionStatus');
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function showTab(tabName) {
+            // Ocultar todas las pestañas
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Mostrar pestaña seleccionada
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Manejar formulario de inspección
+        document.getElementById('inspectionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (connectionStatus !== 'connected') {
+                alert('Primero debes configurar y probar la conexión con Supabase');
+                return;
+            }
+            
+            const formData = {
+                inspector: document.getElementById('inspector').value,
+                modelo: document.getElementById('modelo').value,
+                trazabilidad: document.getElementById('trazabilidad').value,
+                piezas: Array.from(document.querySelectorAll('input[name="piezas"]:checked')).map(cb => cb.value),
+                prioridad: document.getElementById('prioridad').value,
+                observaciones: document.getElementById('observaciones').value
+            };
+            
+            try {
+                const { data, error } = await supabase
+                    .from('inspecciones')
+                    .insert([formData])
+                    .select();
+                
+                if (error) {
+                    alert('Error al guardar: ' + error.message);
+                } else {
+                    alert('Inspección guardada exitosamente');
+                    document.getElementById('inspectionForm').reset();
+                }
+            } catch (error) {
+                alert('Error inesperado: ' + error.message);
             }
         });
 
-        // Cargar inspecciones desde la base de datos
         async function loadInspections() {
-            if (!isConnected) return;
-
-            try {
-                const { data: inspections, error } = await supabase
-                    .from('inspecciones')
-                    .select(`
-                        *,
-                        fotos (
-                            nombre_archivo,
-                            url_archivo
-                        )
-                    `)
-                    .order('created_at', { ascending: false });
-
-                if (error) {
-                    throw error;
-                }
-
-                updateInspectionsList(inspections);
-                updateStats(inspections);
-
-            } catch (error) {
-                console.error('Error cargando inspecciones:', error);
-                showAlert('Error cargando inspecciones: ' + error.message, 'error');
+            if (connectionStatus !== 'connected') {
+                document.getElementById('inspectionsList').innerHTML = 
+                    '<div class="status error">Primero configura la conexión con Supabase</div>';
+                return;
             }
-        }
-
-        function updateInspectionsList(inspections) {
-            const list = document.getElementById('inspectionsList');
             
-            if (!inspections || inspections.length === 0) {
-                list.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #7f8c8d;">
-                        No hay inspecciones registradas aún
-                    </div>
-                `;
-                return;
+            try {
+                const { data, error } = await supabase
+                    .from('inspecciones')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    document.getElementById('inspectionsList').innerHTML = 
+                        `<div class="status error">Error cargando datos: ${error.message}</div>`;
+                    return;
+                }
+                
+                let html = `<h3>📊 Inspecciones (${data.length})</h3>`;
+                
+                if (data.length === 0) {
+                    html += '<div class="status info">No hay inspecciones registradas</div>';
+                } else {
+                    data.forEach(insp => {
+                        html += `
+                            <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px;">
+                                <strong>${insp.inspector}</strong> - ${insp.modelo}<br>
+                                <small>Trazabilidad: ${insp.trazabilidad}</small><br>
+                                <span class="status ${insp.prioridad === 'alta' ? 'error' : insp.prioridad === 'media' ? 'info' : 'success'}" style="display: inline-block; padding: 2px 8px; margin: 5px 0;">
+                                    ${insp.prioridad.toUpperCase()}
+                                </span><br>
+                                <small>Fecha: ${new Date(insp.created_at).toLocaleString()}</small>
+                            </div>
+                        `;
+                    });
+                }
+                
+                document.getElementById('inspectionsList').innerHTML = html;
+                
+            } catch (error) {
+                document.getElementById('inspectionsList').innerHTML = 
+                    `<div class="status error">Error inesperado: ${error.message}</div>`;
             }
-
-            list.innerHTML = inspections.map(inspection => `
-                <div class="inspection-card">
-                    <div class="inspection-header">
-                        <div class="inspection-model">${inspection.modelo}</div>
-                        <div class="inspection-priority ${inspection.prioridad}">
-                            ${inspection.prioridad.toUpperCase()}
-                        </div>
-                    </div>
-                    <div><strong>Inspector:</strong> ${inspection.inspector}</div>
-                    <div><strong>Trazabilidad:</strong> ${inspection.trazabilidad}</div>
-                    <div><strong>Piezas:</strong> ${inspection.piezas.join(', ')}</div>
-                    <div><strong>Fecha:</strong> ${new Date(inspection.created_at).toLocaleString('es-ES')}</div>
-                    ${inspection.observaciones ? `<div><strong>Observaciones:</strong> ${inspection.observaciones}</div>` : ''}
-                    <div><strong>Fotos:</strong> ${inspection.fotos ? inspection.fotos.length : 0} archivo(s)</div>
-                    ${inspection.fotos && inspection.fotos.length > 0 ? `
-                        <div style="margin-top: 10px;">
-                            ${inspection.fotos.slice(0, 3).map(foto => `
-                                <img src="${foto.url_archivo}" 
-                                     style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px; margin-right: 5px; cursor: pointer;"
-                                     onclick="window.open('${foto.url_archivo}', '_blank')">
-                            `).join('')}
-                            ${inspection.fotos.length > 3 ? `<span style="color: #7f8c8d;">+${inspection.fotos.length - 3} más</span>` : ''}
-                        </div>
-                    ` : ''}
-                </div>
-            `).join('');
         }
 
-        function updateStats(inspections) {
-            if (!inspections) {
-                document.getElementById('totalInspections').textContent = '0';
-                document.getElementById('highPriorityInspections').textContent = '0';
-                return;
+        function clearLocalData() {
+            if (confirm('¿Estás seguro de que quieres limpiar los datos locales guardados?')) {
+                localStorage.removeItem('supabase_url');
+                localStorage.removeItem('supabase_key');
+                document.getElementById('supabaseUrl').value = '';
+                document.getElementById('supabaseKey').value = '';
+                showStatus('info', 'Datos locales limpiados');
             }
-
-            document.getElementById('totalInspections').textContent = inspections.length;
-            document.getElementById('highPriorityInspections').textContent = 
-                inspections.filter(i => i.prioridad === 'alta').length;
         }
 
-        // Cargar configuración al iniciar
-        loadSavedConfig();
-
-        // Actualizar inspecciones cada 30 segundos si está conectado
-        setInterval(() => {
-            if (isConnected) {
-                loadInspections();
-            }
-        }, 30000);
+        // Cargar credenciales al iniciar
+        window.addEventListener('load', loadSavedCredentials);
     </script>
 </body>
 </html>
