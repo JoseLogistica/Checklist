@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Inspección de Turbinas</title>
+    <title>CHECKLIS DE CALIDAD</title>
     <style>
         * {
             margin: 0;
@@ -335,7 +335,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔧 Sistema de Inspección de Turbinas</h1>
+            <h1>🔧 Sistema de Inspección de Máquina terminada</h1>
             <p>Gestión integral de inspecciones y reparaciones</p>
         </div>
 
@@ -364,7 +364,16 @@
                 
                 <div class="form-group">
                     <label>🏭 Modelo de Turbina:</label>
-                    <input type="text" id="modelo" required>
+                    <select id="modelo" required>
+                        <option value="">Seleccionar modelo...</option>
+                        <option value="SG8x">SG8x</option>
+                        <option value="SG9x">SG9x</option>
+                        <option value="G114">G114</option>
+                        <option value="G114 2'5">G114 2'5</option>
+                        <option value="SG3x">SG3x</option>
+                        <option value="SG4x">SG4x</option>
+                        <option value="SG5x">SG5x</option>
+                    </select>
                 </div>
                 
                 <div class="form-group">
@@ -397,6 +406,17 @@
                         <option value="alta">🔴 Alta</option>
                         <option value="media">🟡 Media</option>
                         <option value="baja">🟢 Baja</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>✅ Estado de la Máquina:</label>
+                    <select id="estadoMaquina" required>
+                        <option value="">Seleccionar estado...</option>
+                        <option value="ok">✅ OK - Máquina en buen estado</option>
+                        <option value="reparar">🔧 Necesita reparación</option>
+                        <option value="critico">🚨 Estado crítico</option>
+                        <option value="pendiente">⏳ Pendiente de revisión</option>
                     </select>
                 </div>
                 
@@ -490,14 +510,21 @@ CREATE TABLE inspecciones (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tabla para fotos
-CREATE TABLE fotos (
+-- Tabla para fotos (compatible con estructura existente)
+CREATE TABLE IF NOT EXISTS fotos (
   id BIGSERIAL PRIMARY KEY,
   inspeccion_id BIGINT REFERENCES inspecciones(id) ON DELETE CASCADE,
   nombre_archivo TEXT NOT NULL,
-  datos_imagen TEXT NOT NULL,
+  url_archivo TEXT, -- Para compatibilidad
+  datos_imagen TEXT, -- Base64 de la imagen
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Si ya tienes la tabla fotos, ejecuta esto para añadir la columna datos_imagen:
+-- ALTER TABLE fotos ADD COLUMN IF NOT EXISTS datos_imagen TEXT;
+
+-- Si quieres que url_archivo no sea obligatorio (recomendado):
+-- ALTER TABLE fotos ALTER COLUMN url_archivo DROP NOT NULL;
 
 -- Permitir acceso público
 ALTER TABLE inspecciones ENABLE ROW LEVEL SECURITY;
@@ -835,6 +862,7 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                 trazabilidad: document.getElementById('trazabilidad').value,
                 piezas: piezasSeleccionadas,
                 prioridad: document.getElementById('prioridad').value,
+                estado_maquina: document.getElementById('estadoMaquina').value,
                 observaciones: document.getElementById('observaciones').value || null
             };
             
@@ -901,7 +929,8 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                                 .insert([{
                                     inspeccion_id: inspectionId,
                                     nombre_archivo: file.name,
-                                    datos_imagen: e.target.result
+                                    url_archivo: e.target.result, // Para compatibilidad con tabla existente
+                                    datos_imagen: e.target.result // Base64 de la imagen
                                 }]);
                             
                             if (error) {
@@ -1089,10 +1118,10 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                                     <strong>📷 Fotos (${insp.fotos.length}):</strong>
                                     <div class="photo-preview" style="margin-top: 8px;">
                                         ${insp.fotos.map(foto => `
-                                            <img src="${foto.datos_imagen}" 
+                                            <img src="${foto.url_archivo || foto.datos_imagen}" 
                                                  class="photo-thumbnail" 
                                                  alt="${foto.nombre_archivo}"
-                                                 onclick="showImageModal('${foto.datos_imagen}')"
+                                                 onclick="showImageModal('${foto.url_archivo || foto.datos_imagen}')"
                                                  title="${foto.nombre_archivo}">
                                         `).join('')}
                                     </div>
