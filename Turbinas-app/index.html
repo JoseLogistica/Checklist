@@ -1,17 +1,48 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <!-- Head intacto -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <!-- Tu código HTML y CSS permanece igual, sin cambios -->
+  <!-- Tu HTML y CSS aquí -->
 
-  <!-- Donde termina tu último script -->
   <script>
-    // Aquí se agregan las nuevas funciones que completan el sistema
-
     let inspectionsList = [];
     let connectionStatus = 'disconnected';
+    let supabase;
+
+    const DB_CONFIG = {
+      url: 'https://your-project.supabase.co',
+      key: 'your-anon-key-here'
+    };
+
+    const DEVICE_ID = getDeviceId();
+
+    function getDeviceId() {
+      let deviceId = localStorage.getItem('turbine_device_id');
+      if (!deviceId) {
+        deviceId = 'turbine_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('turbine_device_id', deviceId);
+      }
+      return deviceId;
+    }
+
+    async function connectToDatabase() {
+      try {
+        supabase = window.supabase.createClient(DB_CONFIG.url, DB_CONFIG.key);
+
+        const { error } = await supabase
+          .from('inspecciones')
+          .select('id')
+          .limit(1);
+
+        if (error) throw error;
+        connectionStatus = 'connected';
+      } catch (err) {
+        connectionStatus = 'disconnected';
+        throw err;
+      }
+    }
 
     async function loadInspections() {
       const container = document.getElementById('inspectionsList');
@@ -129,12 +160,23 @@
     async function initializeApp() {
       try {
         await connectToDatabase();
-        setupEventListeners();
+        // setupEventListeners(); <-- agregar si existe esta función
         updateConnectionStatus();
         loadInspections();
       } catch (error) {
         console.error('Error inicializando aplicación:', error);
         updateConnectionStatus('error');
+      }
+    }
+
+    function updateConnectionStatus() {
+      const statusBar = document.getElementById('connectionStatusBar');
+      if (connectionStatus === 'connected') {
+        statusBar.className = 'connection-status connected';
+        statusBar.textContent = '✅ Conectado - Sistema listo para usar';
+      } else {
+        statusBar.className = 'connection-status disconnected';
+        statusBar.textContent = '❌ Sin conexión - Verifica tu internet';
       }
     }
 
