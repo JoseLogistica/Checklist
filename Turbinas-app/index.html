@@ -1,186 +1,167 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Inspección de Turbinas</title>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; background: #f0f2f5; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: 0.25rem; font-weight: bold; }
+    input, textarea, select { width: 100%; padding: 0.5rem; border-radius: 5px; border: 1px solid #ccc; }
+    .btn { padding: 0.5rem 1rem; border: none; border-radius: 5px; cursor: pointer; margin-top: 1rem; }
+    .btn-primary { background: #007bff; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-danger { background: #dc3545; color: white; }
+    .inspection-card { background: white; padding: 1rem; margin-bottom: 1rem; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    img.preview { max-width: 100px; margin-right: 0.5rem; border-radius: 5px; }
+  </style>
 </head>
 <body>
-  <!-- Tu HTML y CSS aquí -->
+  <h1>🔧 Sistema de Inspección de Turbinas</h1>
+  <div id="connectionStatus"></div>
+  <div class="form-group">
+    <label>URL de Supabase</label>
+    <input type="text" id="supabaseUrl" placeholder="https://xyzcompany.supabase.co" />
+  </div>
+  <div class="form-group">
+    <label>Clave pública (anon key)</label>
+    <input type="text" id="supabaseKey" placeholder="eyJ..." />
+  </div>
+  <button class="btn btn-primary" onclick="saveCredentials()">Guardar configuración</button>
+
+  <hr />
+  <form id="inspectionForm">
+    <h2>📝 Nueva Inspección</h2>
+    <div class="form-group"><label>Inspector</label><input type="text" id="inspector" required /></div>
+    <div class="form-group"><label>Modelo</label><input type="text" id="modelo" required /></div>
+    <div class="form-group"><label>Trazabilidad</label><input type="text" id="trazabilidad" required /></div>
+    <div class="form-group">
+      <label>Pieza</label>
+      <select id="pieza" required>
+        <option value="">Selecciona una</option>
+        <option value="Fondo">Fondo</option>
+        <option value="Carcasa">Carcasa</option>
+        <option value="Buje">Buje</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Prioridad</label>
+      <select id="prioridad" required>
+        <option value="alta">Alta</option>
+        <option value="media">Media</option>
+        <option value="baja">Baja</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Observaciones</label>
+      <textarea id="observaciones"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Fotos</label>
+      <input type="file" id="fotos" multiple accept="image/*" />
+    </div>
+    <button class="btn btn-success" type="submit">Guardar Inspección</button>
+  </form>
+
+  <hr />
+  <h2>📋 Historial</h2>
+  <div id="inspectionsList"></div>
 
   <script>
-    let inspectionsList = [];
-    let connectionStatus = 'disconnected';
-    let supabase;
+    let supabase = null;
 
-    const DB_CONFIG = {
-      url: 'https://your-project.supabase.co',
-      key: 'your-anon-key-here'
-    };
-
-    const DEVICE_ID = getDeviceId();
-
-    function getDeviceId() {
-      let deviceId = localStorage.getItem('turbine_device_id');
-      if (!deviceId) {
-        deviceId = 'turbine_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
-        localStorage.setItem('turbine_device_id', deviceId);
+    function saveCredentials() {
+      const url = document.getElementById('supabaseUrl').value.trim();
+      const key = document.getElementById('supabaseKey').value.trim();
+      if (url && key) {
+        localStorage.setItem('supabase_url', url);
+        localStorage.setItem('supabase_key', key);
+        initSupabase();
       }
-      return deviceId;
     }
 
-    async function connectToDatabase() {
-      try {
-        supabase = window.supabase.createClient(DB_CONFIG.url, DB_CONFIG.key);
-
-        const { error } = await supabase
-          .from('inspecciones')
-          .select('id')
-          .limit(1);
-
-        if (error) throw error;
-        connectionStatus = 'connected';
-      } catch (err) {
-        connectionStatus = 'disconnected';
-        throw err;
+    function initSupabase() {
+      const url = localStorage.getItem('supabase_url');
+      const key = localStorage.getItem('supabase_key');
+      if (url && key) {
+        supabase = window.supabase.createClient(url, key);
+        document.getElementById('connectionStatus').textContent = '✅ Conectado a Supabase';
+        loadInspections();
+      } else {
+        document.getElementById('connectionStatus').textContent = '❌ No conectado';
       }
+    }
+
+    async function uploadPhotos(photos, inspectionId) {
+      const uploaded = [];
+      for (const file of photos) {
+        const filePath = `${inspectionId}/${file.name}`;
+        const { data, error } = await supabase.storage.from('fotos').upload(filePath, file, {
+          cacheControl: '3600', upsert: true
+        });
+        if (!error) {
+          const { data: publicUrl } = supabase.storage.from('fotos').getPublicUrl(filePath);
+          uploaded.push({ inspeccion_id: inspectionId, nombre_archivo: file.name, url_archivo: publicUrl.publicUrl });
+        }
+      }
+      if (uploaded.length > 0) {
+        await supabase.from('fotos').insert(uploaded);
+      }
+    }
+
+    document.getElementById('inspectionForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const formData = {
+        inspector: document.getElementById('inspector').value,
+        modelo: document.getElementById('modelo').value,
+        trazabilidad: document.getElementById('trazabilidad').value,
+        pieza: document.getElementById('pieza').value,
+        prioridad: document.getElementById('prioridad').value,
+        observaciones: document.getElementById('observaciones').value,
+        completado: false
+      };
+
+      const { data, error } = await supabase.from('inspecciones').insert([formData]).select();
+      if (error) return alert('❌ Error al guardar inspección');
+
+      const inspectionId = data[0].id;
+      const photos = document.getElementById('fotos').files;
+      if (photos.length > 0) await uploadPhotos(photos, inspectionId);
+
+      alert('✅ Inspección guardada');
+      document.getElementById('inspectionForm').reset();
+      loadInspections();
+    });
+
+    async function markCompleted(id) {
+      await supabase.from('inspecciones').update({ completado: true }).eq('id', id);
+      loadInspections();
     }
 
     async function loadInspections() {
-      const container = document.getElementById('inspectionsList');
-      container.innerHTML = '<div class="loading">⏳ Cargando inspecciones...</div>';
+      const list = document.getElementById('inspectionsList');
+      const { data, error } = await supabase.from('inspecciones').select('*').order('created_at', { ascending: false });
+      if (error) return list.innerHTML = '<p>Error cargando inspecciones</p>';
+      list.innerHTML = '';
 
-      try {
-        const { data, error } = await supabase
-          .from('inspecciones')
-          .select('*, fotos(*)')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        inspectionsList = data;
-
-        if (!data || data.length === 0) {
-          container.innerHTML = '<div class="status info">ℹ️ No hay inspecciones registradas</div>';
-          return;
-        }
-
-        container.innerHTML = data.map(inspection => `
-          <div class="inspection-card">
-            <div class="inspection-header">
-              <strong>${inspection.modelo}</strong>
-              <span class="priority-badge priority-${inspection.prioridad}">
-                ${inspection.prioridad.toUpperCase()}
-              </span>
-            </div>
-            <div class="inspection-date">📅 ${new Date(inspection.created_at).toLocaleString()}</div>
-            <div><strong>Inspector:</strong> ${inspection.inspector}</div>
-            <div><strong>Pieza:</strong> ${inspection.pieza}</div>
-            <div><strong>Trazabilidad:</strong> ${inspection.trazabilidad}</div>
-            <div><strong>Observaciones:</strong> ${inspection.observaciones}</div>
-            <div><strong>Fotos:</strong>
-              <div class="photo-gallery">
-                ${inspection.fotos?.map(f => `<img src="${f.contenido_base64}" onclick="openPhotoModal('${f.contenido_base64}')">`).join('') || 'No hay fotos'}
-              </div>
-            </div>
-            <div style="margin-top: 10px;">
-              <button class="btn btn-success" onclick="markAsCompleted(${inspection.id})">✅ Marcar como Completado</button>
-            </div>
-          </div>
-        `).join('');
-      } catch (err) {
-        console.error('Error cargando inspecciones:', err);
-        container.innerHTML = '<div class="status error">❌ No se pudieron cargar las inspecciones</div>';
-      }
-    }
-
-    async function markAsCompleted(id) {
-      try {
-        const { error } = await supabase
-          .from('inspecciones')
-          .update({ completado: true })
-          .eq('id', id);
-
-        if (error) throw error;
-        alert('✅ Reparación marcada como completada');
-        loadInspections();
-      } catch (err) {
-        console.error('Error marcando como completado:', err);
-        alert('❌ No se pudo completar');
-      }
-    }
-
-    function exportData() {
-      if (!inspectionsList.length) {
-        alert('⚠️ No hay datos para exportar');
-        return;
-      }
-
-      const csvHeader = ['Inspector', 'Modelo', 'Trazabilidad', 'Pieza', 'Prioridad', 'Observaciones', 'Fecha'];
-      const csvRows = inspectionsList.map(i => [
-        i.inspector,
-        i.modelo,
-        i.trazabilidad,
-        i.pieza,
-        i.prioridad,
-        `"${i.observaciones?.replace(/"/g, '""') || ''}"`,
-        new Date(i.created_at).toLocaleString()
-      ]);
-
-      const csvContent = [csvHeader, ...csvRows].map(r => r.join(',')).join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.setAttribute('download', 'inspecciones.csv');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    async function updateSystemStatus() {
-      const statusDiv = document.getElementById('systemStatus');
-      const statsDiv = document.getElementById('systemStats');
-      try {
-        const { count } = await supabase
-          .from('inspecciones')
-          .select('*', { count: 'exact' });
-
-        statusDiv.innerHTML = `
-          <div><strong>📡 Dispositivo ID:</strong> ${DEVICE_ID}</div>
-          <div><strong>🔌 Estado de Conexión:</strong> ${connectionStatus.toUpperCase()}</div>
+      for (const insp of data) {
+        const { data: fotos } = await supabase.from('fotos').select('*').eq('inspeccion_id', insp.id);
+        const card = document.createElement('div');
+        card.className = 'inspection-card';
+        card.innerHTML = `
+          <strong>${insp.inspector}</strong> – ${insp.modelo} (${insp.pieza})<br>
+          <em>Prioridad:</em> ${insp.prioridad}<br>
+          <em>Observaciones:</em> ${insp.observaciones || 'Ninguna'}<br>
+          <div style="margin: 0.5rem 0;">${fotos?.map(f => `<img class="preview" src="${f.url_archivo}" />`).join('')}</div>
+          ${insp.completado ? '<b>✅ Reparación completada</b>' : `<button class="btn btn-primary" onclick="markCompleted(${insp.id})">Marcar como completada</button>`}
         `;
-
-        statsDiv.innerHTML = `
-          <div><strong>📋 Inspecciones Registradas:</strong> ${count}</div>
-          <div><strong>🕒 Última actualización:</strong> ${new Date().toLocaleString()}</div>
-        `;
-      } catch (err) {
-        statusDiv.innerHTML = '<div class="status error">❌ Error al obtener estado del sistema</div>';
+        list.appendChild(card);
       }
     }
 
-    async function initializeApp() {
-      try {
-        await connectToDatabase();
-        // setupEventListeners(); <-- agregar si existe esta función
-        updateConnectionStatus();
-        loadInspections();
-      } catch (error) {
-        console.error('Error inicializando aplicación:', error);
-        updateConnectionStatus('error');
-      }
-    }
-
-    function updateConnectionStatus() {
-      const statusBar = document.getElementById('connectionStatusBar');
-      if (connectionStatus === 'connected') {
-        statusBar.className = 'connection-status connected';
-        statusBar.textContent = '✅ Conectado - Sistema listo para usar';
-      } else {
-        statusBar.className = 'connection-status disconnected';
-        statusBar.textContent = '❌ Sin conexión - Verifica tu internet';
-      }
-    }
-
-    initializeApp();
+    window.addEventListener('DOMContentLoaded', initSupabase);
   </script>
 </body>
 </html>
