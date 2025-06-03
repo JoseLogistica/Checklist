@@ -651,46 +651,87 @@
 
         async function initializeSecureApp() {
             try {
+                console.log('🔄 Cargando Supabase...');
                 await loadSupabase();
                 
                 const url = localStorage.getItem('supabase_url');
                 const key = localStorage.getItem('supabase_key');
                 
+                console.log('🔍 Verificando credenciales...');
+                console.log('URL presente:', !!url);
+                console.log('Key presente:', !!key);
+                
                 if (!url || !key) {
+                    console.log('❌ Credenciales faltantes');
                     showConfigPrompt();
                     return;
                 }
                 
-                supabase = window.supabase.createClient(url, key);
+                console.log('🔗 Creando cliente Supabase...');
+                if (!window.supabase) {
+                    throw new Error('Supabase no se cargó correctamente');
+                }
                 
-                const { data: { session } } = await supabase.auth.getSession();
+                supabase = window.supabase.createClient(url, key);
+                console.log('✅ Cliente Supabase creado');
+                
+                // Verificar que el cliente funcione
+                console.log('🔍 Verificando conexión...');
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    console.error('❌ Error obteniendo sesión:', sessionError);
+                    throw sessionError;
+                }
+                
+                console.log('📊 Sesión obtenida:', !!session);
                 
                 if (session) {
+                    console.log('👤 Usuario ya autenticado');
                     await handleAuthSuccess(session.user);
                 } else {
+                    console.log('🔐 Mostrando pantalla de login');
                     showLoginScreen();
                 }
                 
                 setupSecurityListeners();
+                console.log('✅ Aplicación inicializada correctamente');
                 
             } catch (error) {
-                console.error('Error inicializando aplicación:', error);
+                console.error('❌ Error inicializando aplicación:', error);
                 showAuthStatus('error', 'Error de inicialización: ' + error.message);
+                // Mostrar pantalla de login aunque haya error
+                showLoginScreen();
             }
         }
 
         function setupSecurityListeners() {
-            supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_OUT') {
-                    handleSignOut();
-                }
-            });
+            if (!supabase) {
+                console.error('❌ No se pueden configurar listeners: Supabase no disponible');
+                return;
+            }
+            
+            try {
+                supabase.auth.onAuthStateChange((event, session) => {
+                    console.log('🔐 Evento de auth:', event);
+                    
+                    if (event === 'SIGNED_OUT') {
+                        handleSignOut();
+                    } else if (event === 'TOKEN_REFRESHED') {
+                        console.log('🔄 Token renovado');
+                    }
+                });
 
-            document.addEventListener('mousemove', updateActivity);
-            document.addEventListener('keypress', updateActivity);
-            document.addEventListener('click', updateActivity);
+                document.addEventListener('mousemove', updateActivity);
+                document.addEventListener('keypress', updateActivity);
+                document.addEventListener('click', updateActivity);
 
-            setInterval(checkSessionSecurity, 60000);
+                setInterval(checkSessionSecurity, 60000);
+                
+                console.log('✅ Listeners de seguridad configurados');
+            } catch (error) {
+                console.error('❌ Error configurando listeners:', error);
+            }
         }
 
         function updateActivity() {
@@ -825,6 +866,10 @@
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
             
+            console.log('🔐 Iniciando proceso de login...');
+            console.log('Email:', email);
+            console.log('Supabase cliente:', !!supabase);
+            
             if (!email || !password) {
                 showAuthStatus('error', '❌ Email y contraseña son obligatorios');
                 return;
@@ -835,25 +880,50 @@
                 return;
             }
             
+            if (!supabase) {
+                console.error('❌ Cliente Supabase no disponible');
+                showAuthStatus('error', '❌ Error: Cliente de base de datos no inicializado');
+                // Intentar reinicializar
+                await initializeSecureApp();
+                return;
+            }
+            
             try {
                 showAuthStatus('info', '🔐 Iniciando sesión...');
+                console.log('📡 Enviando solicitud de login...');
                 
                 const { data, error } = await supabase.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
                 
+                console.log('📥 Respuesta de login:', { data: !!data, error: !!error });
+                
                 if (error) {
+                    console.error('❌ Error de Supabase:', error);
                     securityState.loginAttempts++;
                     throw error;
                 }
                 
+                if (!data.user) {
+                    throw new Error('No se recibió información del usuario');
+                }
+                
+                console.log('✅ Login exitoso');
                 securityState.loginAttempts = 0;
                 await handleAuthSuccess(data.user);
                 
             } catch (error) {
-                console.error('Error en login:', error);
+                console.error('❌ Error en login:', error);
                 showAuthStatus('error', '❌ Error de login: ' + error.message);
+                
+                // Si el error es de conexión, intentar reinicializar
+                if (error.message.includes('auth') || error.message.includes('null')) {
+                    console.log('🔄 Intentando reinicializar...');
+                    setTimeout(() => {
+                        initializeSecureApp();
+                    }, 2000);
+                }
             }
         }
 
