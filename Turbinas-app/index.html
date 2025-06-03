@@ -267,18 +267,6 @@
             transform: scale(1.05);
         }
 
-        .photo-thumbnail::after {
-            content: '🔒';
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 2px;
-            border-radius: 3px;
-            font-size: 10px;
-        }
-
         .inspection-card {
             border: 1px solid #ddd;
             padding: 20px;
@@ -479,7 +467,7 @@
                     <div style="font-size: 12px; color: #666;" id="userEmail"></div>
                 </div>
                 <div class="role-badge" id="userRole"></div>
-                <div class="encryption-indicator">🔒 Datos encriptados</div>
+                <div class="encryption-indicator">🔒 Acceso controlado</div>
             </div>
             <div>
                 <button class="btn btn-danger" onclick="signOut()" style="padding: 8px 16px; margin: 0;">🚪 Salir</button>
@@ -568,9 +556,9 @@
                 </div>
                 
                 <div class="form-group">
-                    <label>📷 Fotos (encriptadas):</label>
+                    <label>📷 Fotos (protegidas):</label>
                     <input type="file" id="fotos" multiple accept="image/*">
-                    <small style="color: #666;">Las fotos se encriptan automáticamente antes del almacenamiento</small>
+                    <small style="color: #666;">Las fotos están protegidas por control de acceso - solo usuarios autorizados pueden verlas</small>
                     <div id="photoPreview" class="photo-preview"></div>
                 </div>
                 
@@ -613,7 +601,7 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <div style="text-align: center; margin-bottom: 10px;">
-                <span style="color: #28a745;">🔒 Imagen desencriptada automáticamente</span>
+                <span style="color: #28a745;">🔒 Imagen protegida por control de acceso</span>
             </div>
             <img id="modalImage" src="" alt="Imagen de inspección">
         </div>
@@ -781,14 +769,31 @@
         }
 
         function showConfigPrompt() {
-            const url = prompt('🌐 Introduce la URL de Supabase:\n(ej: https://tuproyecto.supabase.co)');
-            const key = prompt('🔑 Introduce la clave pública de Supabase:\n(empieza con eyJ...)');
+            console.log('⚙️ Solicitando configuración de Supabase');
             
-            if (url && key) {
-                localStorage.setItem('supabase_url', url);
-                localStorage.setItem('supabase_key', key);
-                location.reload();
+            const url = prompt('🌐 Introduce la URL de Supabase:\n(ej: https://tuproyecto.supabase.co)\n\nSin barra al final');
+            if (!url) return;
+            
+            const key = prompt('🔑 Introduce la clave pública de Supabase:\n(empieza con eyJ...)\n\nLa encontrarás en Settings > API');
+            if (!key) return;
+            
+            // Validar formato básico
+            if (!url.startsWith('https://')) {
+                alert('❌ La URL debe empezar con https://');
+                return;
             }
+            
+            if (!key.startsWith('eyJ')) {
+                alert('❌ La clave debe empezar con "eyJ"');
+                return;
+            }
+            
+            console.log('💾 Guardando credenciales...');
+            localStorage.setItem('supabase_url', url.trim());
+            localStorage.setItem('supabase_key', key.trim());
+            
+            console.log('🔄 Reiniciando aplicación...');
+            location.reload();
         }
 
         function showLoginScreen() {
@@ -1097,7 +1102,7 @@
                     
                     try {
                         const submitBtn = document.querySelector('#inspectionForm button[type="submit"]');
-                        submitBtn.textContent = '⏳ Guardando de forma segura...';
+                        submitBtn.textContent = '⏳ Guardando de forma protegida...';
                         submitBtn.disabled = true;
                         
                         const { data: inspection, error: inspectionError } = await supabase
@@ -1115,7 +1120,7 @@
                             await saveEncryptedPhotos(inspection.id, fotosInput.files);
                         }
                         
-                        alert('✅ Inspección guardada de forma segura');
+                        alert('✅ Inspección guardada con protección RLS');
                         resetForm();
                         showTab('data');
                         
@@ -1170,7 +1175,7 @@
                     reader.onload = async function(e) {
                         try {
                             const imageData = e.target.result;
-                            const encryptedData = encryptData(imageData);
+                            // En lugar de encriptar, guardamos directamente para usuarios autorizados
                             const hash = btoa(imageData.substring(0, 100));
                             
                             const { error } = await supabase
@@ -1179,7 +1184,7 @@
                                     inspeccion_id: inspectionId,
                                     user_id: currentUser.id,
                                     nombre_archivo: file.name,
-                                    datos_encriptados: encryptedData,
+                                    datos_encriptados: imageData, // Guardamos la imagen directamente
                                     hash_verificacion: hash
                                 }]);
                             
@@ -1187,6 +1192,7 @@
                                 reject(error);
                             } else {
                                 securityState.encryptedFiles++;
+                                console.log(`✅ Foto guardada: ${file.name}`);
                                 resolve();
                             }
                         } catch (err) {
@@ -1216,7 +1222,7 @@
                                 img.src = e.target.result;
                                 img.className = 'photo-thumbnail';
                                 img.onclick = () => showImageModal(e.target.result);
-                                img.title = `${file.name} (se encriptará automáticamente)`;
+                                img.title = `${file.name} (se almacenará de forma segura)`;
                                 preview.appendChild(img);
                             };
                             reader.readAsDataURL(file);
@@ -1310,12 +1316,13 @@
                             .select('*')
                             .eq('inspeccion_id', inspection.id);
                         
-                        const decryptedPhotos = photos ? photos.map(photo => ({
+                        // Las fotos están protegidas por RLS, no necesitan desencriptación adicional
+                        const processedPhotos = photos ? photos.map(photo => ({
                             ...photo,
-                            datos_imagen: decryptData(photo.datos_encriptados)
+                            datos_imagen: photo.datos_encriptados // Usar directamente los datos
                         })) : [];
                         
-                        return { ...inspection, fotos: decryptedPhotos };
+                        return { ...inspection, fotos: processedPhotos };
                     })
                 );
                 
@@ -1336,7 +1343,7 @@
                     <h3>📊 Historial Seguro de Inspecciones</h3>
                     <div style="display: flex; gap: 10px;">
                         <div class="status success" style="margin: 0;">🔒 ${inspections.length} registros</div>
-                        <div class="encryption-indicator">🔐 Datos protegidos</div>
+                        <div class="encryption-indicator">🔐 RLS protegido</div>
                     </div>
                 </div>
             `;
@@ -1395,14 +1402,14 @@
                             
                             ${insp.fotos && insp.fotos.length > 0 ? `
                                 <div style="margin: 15px 0;">
-                                    <strong>📷 Fotos encriptadas (${insp.fotos.length}):</strong>
+                                    <strong>📷 Fotos protegidas (${insp.fotos.length}):</strong>
                                     <div class="photo-preview" style="margin-top: 8px;">
                                         ${insp.fotos.map(foto => `
                                             <img src="${foto.datos_imagen}" 
                                                  class="photo-thumbnail" 
                                                  alt="${foto.nombre_archivo}"
                                                  onclick="showImageModal('${foto.datos_imagen}')"
-                                                 title="🔒 ${foto.nombre_archivo} (desencriptada automáticamente)">
+                                                 title="🔒 ${foto.nombre_archivo} (acceso controlado por RLS)">
                                         `).join('')}
                                     </div>
                                 </div>
