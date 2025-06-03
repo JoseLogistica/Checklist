@@ -35,13 +35,51 @@
             position: relative;
         }
 
-        .connection-status {
+        .user-info {
             background: #f8f9fa;
             padding: 15px;
             border-bottom: 1px solid #dee2e6;
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .user-details {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .role-badge {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .role-admin { background: #ff4757; color: white; }
+        .role-inspector { background: #3742fa; color: white; }
+        .role-viewer { background: #2ed573; color: white; }
+
+        .login-form {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
 
         .tabs {
@@ -62,6 +100,11 @@
         .tab.active {
             background: white;
             border-bottom-color: #667eea;
+        }
+
+        .tab.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .tab-content {
@@ -368,33 +411,134 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Pantalla de Login -->
+    <div id="loginScreen" class="container">
         <div class="header">
             <h1>🔧 Sistema de Inspección de Turbinas</h1>
-            <p>Gestión completa de inspecciones con fotos</p>
+            <p>Sistema seguro con autenticación de usuarios</p>
         </div>
 
-        <div class="connection-status">
-            <div id="connectionIndicator" class="status info">🔄 Verificando conexión...</div>
-            <button class="btn" onclick="showTab('config')" style="padding: 8px 16px; margin: 0;">⚙️ Configuración</button>
+        <div class="login-form">
+            <h3 style="text-align: center; margin-bottom: 30px;">🔐 Iniciar Sesión</h3>
+            
+            <div id="loginTabs" style="display: flex; margin-bottom: 20px;">
+                <button class="btn" onclick="showLoginTab('signin')" id="signinTab" style="flex: 1; margin: 0 5px;">Entrar</button>
+                <button class="btn" onclick="showLoginTab('signup')" id="signupTab" style="flex: 1; margin: 0 5px;">Registrarse</button>
+            </div>
+
+            <!-- Formulario de Login -->
+            <div id="signinForm">
+                <div class="form-group">
+                    <label>📧 Email:</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>🔑 Contraseña:</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button class="btn btn-success" onclick="signIn()" style="width: 100%;">🔓 Iniciar Sesión</button>
+            </div>
+
+            <!-- Formulario de Registro -->
+            <div id="signupForm" class="hidden">
+                <div class="form-group">
+                    <label>👤 Nombre completo:</label>
+                    <input type="text" id="signupName" required>
+                </div>
+                <div class="form-group">
+                    <label>📧 Email:</label>
+                    <input type="email" id="signupEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>🔑 Contraseña:</label>
+                    <input type="password" id="signupPassword" required minlength="8">
+                    <small>Mínimo 8 caracteres</small>
+                </div>
+                <div class="form-group">
+                    <label>🛡️ Rol solicitado:</label>
+                    <select id="signupRole" required>
+                        <option value="">Seleccionar rol...</option>
+                        <option value="inspector">🔧 Inspector - Puede crear y editar inspecciones</option>
+                        <option value="viewer">👁️ Visualizador - Solo lectura</option>
+                    </select>
+                </div>
+                <button class="btn btn-success" onclick="signUp()" style="width: 100%;">📝 Registrarse</button>
+            </div>
+
+            <div id="authStatus"></div>
+        </div>
+    </div>
+
+    <!-- Configuración de Supabase (después del login) -->
+    <div id="configScreen" class="container hidden">
+        <div class="header">
+            <h1>⚙️ Configuración Inicial</h1>
+            <p>Configura la conexión a tu base de datos</p>
+        </div>
+
+        <div class="config-section" style="margin: 20px;">
+            <h3>🔗 Conectar con Supabase</h3>
+            <p>Para continuar, necesitas configurar la conexión a tu base de datos Supabase:</p>
+            
+            <div class="form-group">
+                <label>🌐 URL del proyecto Supabase:</label>
+                <input type="url" id="supabaseUrl" placeholder="https://tuproyecto.supabase.co">
+                <small>Ejemplo: https://abcdefghijk.supabase.co (sin barra al final)</small>
+            </div>
+            
+            <div class="form-group">
+                <label>🔑 Clave pública (anon key):</label>
+                <input type="password" id="supabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                <small>Una cadena muy larga que empieza con "eyJ"</small>
+            </div>
+            
+            <div class="form-group">
+                <button class="btn" onclick="testSupabaseConnection()">🔗 Probar Conexión</button>
+                <button class="btn btn-success" onclick="saveSupabaseConfig()">💾 Guardar y Continuar</button>
+            </div>
+
+            <div id="supabaseStatus"></div>
+        </div>
+    </div>
+
+    <!-- Aplicación Principal -->
+    <div id="mainApp" class="container hidden">
+        <div class="header">
+            <h1>🔧 Sistema de Inspección de Turbinas</h1>
+            <p>Gestión completa de inspecciones</p>
+        </div>
+
+        <div class="user-info">
+            <div class="user-details">
+                <div class="user-avatar" id="userAvatar"></div>
+                <div>
+                    <div style="font-weight: bold;" id="userName"></div>
+                    <div style="font-size: 12px; color: #666;" id="userEmail"></div>
+                </div>
+                <div class="role-badge" id="userRole"></div>
+            </div>
+            <div>
+                <button class="btn" onclick="showSupabaseConfig()" style="padding: 8px 16px; margin: 0 5px;">⚙️ DB Config</button>
+                <button class="btn btn-danger" onclick="signOut()" style="padding: 8px 16px; margin: 0;">🚪 Salir</button>
+            </div>
         </div>
 
         <div class="tabs">
-            <div class="tab active" onclick="showTab('inspect')">📋 Nueva Inspección</div>
-            <div class="tab" onclick="showTab('data')">📊 Historial</div>
-            <div class="tab" onclick="showTab('config')">⚙️ Configuración</div>
+            <div class="tab active" onclick="showTab('inspect')" id="inspectTab">📋 Nueva Inspección</div>
+            <div class="tab" onclick="showTab('data')" id="dataTab">📊 Historial</div>
         </div>
 
         <!-- Pestaña Nueva Inspección -->
         <div id="inspect-tab" class="tab-content active">
-            <div id="connectionAlert" class="status error" style="display: none;">
-                ⚠️ No hay conexión con la base de datos. Ve a Configuración para conectar.
+            <div id="inspectAccessDenied" class="status error hidden">
+                🚫 Acceso denegado. No tienes permisos para crear inspecciones.
             </div>
             
             <form id="inspectionForm">
                 <div class="form-group">
                     <label>👤 Inspector:</label>
-                    <input type="text" id="inspector" required>
+                    <input type="text" id="inspector" required readonly>
+                    <small>Se establece automáticamente según tu usuario</small>
                 </div>
                 
                 <div class="form-group">
@@ -502,41 +646,6 @@
             </div>
             <div id="inspectionsList"></div>
         </div>
-
-        <!-- Pestaña Configuración -->
-        <div id="config-tab" class="tab-content">
-            <div class="config-section">
-                <h3>⚙️ Configuración de Base de Datos</h3>
-                <div id="currentStatus" class="status info">🔄 Verificando conexión...</div>
-                
-                <div class="form-group">
-                    <label>🌐 URL del proyecto Supabase:</label>
-                    <input type="url" id="configSupabaseUrl" placeholder="https://tuproyecto.supabase.co">
-                    <small>Ejemplo: https://abcdefghijk.supabase.co (sin barra al final)</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>🔑 Clave pública (anon key):</label>
-                    <input type="password" id="configSupabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
-                    <small>Una cadena muy larga que empieza con "eyJ"</small>
-                </div>
-                
-                <div class="form-group">
-                    <button class="btn" onclick="testConnection()">🔗 Probar Conexión</button>
-                    <button class="btn btn-success" onclick="saveCredentials()">💾 Guardar y Conectar</button>
-                    <button class="btn btn-danger" onclick="clearLocalData()">🗑️ Limpiar Configuración</button>
-                </div>
-            </div>
-
-            <div id="connectionStatus"></div>
-
-            <div class="config-section">
-                <h3>📊 Estado de la conexión:</h3>
-                <div id="checkResults">
-                    <div class="status info">⏳ Esperando verificación...</div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Modal para ver imágenes -->
@@ -560,23 +669,28 @@
 
     <script>
         let supabase = null;
-        let connectionStatus = 'disconnected';
-        let supabaseLoaded = false;
+        let currentUser = null;
+        let userRole = null;
+        let supabaseConfigured = false;
         let currentEditingId = null;
         let selectedPhotos = [];
+
+        // Configuración de seguridad
+        const SECURITY_CONFIG = {
+            maxLoginAttempts: 3,
+            passwordMinLength: 8
+        };
+
+        let securityState = {
+            loginAttempts: 0
+        };
 
         // Función para cargar Supabase
         function loadSupabase() {
             return new Promise((resolve, reject) => {
-                if (supabaseLoaded) {
-                    resolve();
-                    return;
-                }
-
                 const script = document.createElement('script');
                 script.src = 'https://unpkg.com/@supabase/supabase-js@2';
                 script.onload = () => {
-                    supabaseLoaded = true;
                     console.log('✅ Supabase cargado correctamente');
                     resolve();
                 };
@@ -588,181 +702,412 @@
             });
         }
 
-        // Cargar credenciales guardadas y conectar automáticamente
-        async function loadSavedCredentials() {
-            const url = localStorage.getItem('supabase_url');
-            const key = localStorage.getItem('supabase_key');
-            
-            if (url) document.getElementById('configSupabaseUrl').value = url;
-            if (key) document.getElementById('configSupabaseKey').value = key;
-            
-            if (url && key) {
-                console.log('🔄 Conectando automáticamente...');
-                updateConnectionIndicator('info', '🔄 Conectando automáticamente...');
-                const success = await initSupabase(url, key);
-                if (success) {
-                    connectionStatus = 'connected';
-                    updateConnectionIndicator('success', '✅ Conectado y listo');
-                    updateTabsVisibility();
-                } else {
-                    updateConnectionIndicator('error', '❌ Error de conexión');
-                    updateTabsVisibility();
-                }
-            } else {
-                updateConnectionIndicator('warning', '⚙️ Configuración requerida');
-                updateTabsVisibility();
-            }
-        }
-
-        function updateConnectionIndicator(type, message) {
-            const indicator = document.getElementById('connectionIndicator');
-            indicator.className = `status ${type}`;
-            indicator.textContent = message;
-            
-            const currentStatus = document.getElementById('currentStatus');
-            if (currentStatus) {
-                currentStatus.className = `status ${type}`;
-                currentStatus.textContent = message;
-            }
-        }
-
-        function updateTabsVisibility() {
-            const alert = document.getElementById('connectionAlert');
-            
-            if (connectionStatus === 'connected') {
-                if (alert) alert.style.display = 'none';
-            } else {
-                if (alert) alert.style.display = 'block';
-            }
-        }
-
-        async function saveCredentials() {
-            const url = document.getElementById('configSupabaseUrl').value.trim();
-            const key = document.getElementById('configSupabaseKey').value.trim();
-            
-            if (!url || !key) {
-                showStatus('error', '❌ Por favor, completa ambos campos');
-                return;
-            }
-            
-            localStorage.setItem('supabase_url', url);
-            localStorage.setItem('supabase_key', key);
-            
-            showStatus('success', '💾 Credenciales guardadas correctamente');
-            const success = await initSupabase(url, key);
-            if (success) {
-                connectionStatus = 'connected';
-                showStatus('success', '✅ Conexión configurada y lista para usar');
-                updateConnectionIndicator('success', '✅ Conectado y listo');
-                updateTabsVisibility();
+        // Inicializar aplicación
+        async function initializeApp() {
+            try {
+                await loadSupabase();
                 
-                setTimeout(() => showTab('inspect'), 1000);
+                // Verificar si hay configuración de Supabase
+                const url = localStorage.getItem('supabase_url');
+                const key = localStorage.getItem('supabase_key');
+                
+                if (url && key) {
+                    await initSupabase(url, key);
+                    
+                    // Verificar sesión existente
+                    const { data: { session } } = await supabase.auth.getSession();
+                    
+                    if (session) {
+                        await handleAuthSuccess(session.user);
+                        showMainApp();
+                    } else {
+                        showLoginScreen();
+                    }
+                } else {
+                    // No hay configuración, mostrar login y después pedir config
+                    showLoginScreen();
+                }
+                
+            } catch (error) {
+                console.error('Error inicializando aplicación:', error);
+                showLoginScreen();
             }
         }
 
         async function initSupabase(url, key) {
             try {
-                await loadSupabase();
-                
                 if (!window.supabase) {
                     throw new Error('Supabase no se cargó correctamente');
                 }
                 
                 supabase = window.supabase.createClient(url, key);
-                
-                // Probar la conexión
-                const { data, error } = await supabase
-                    .from('inspecciones')
-                    .select('count', { count: 'exact', head: true });
-                
-                if (error && error.code === 'PGRST116') {
-                    showStatus('warning', '⚠️ Tabla "inspecciones" no existe. Ejecuta el SQL de creación');
-                    return false;
-                } else if (error) {
-                    throw error;
-                }
-                
+                supabaseConfigured = true;
+                console.log('✅ Supabase configurado');
                 return true;
             } catch (error) {
                 console.error('❌ Error inicializando Supabase:', error);
-                showStatus('error', '❌ Error al inicializar: ' + error.message);
                 return false;
             }
         }
 
-        async function testConnection() {
-            const url = document.getElementById('configSupabaseUrl').value.trim();
-            const key = document.getElementById('configSupabaseKey').value.trim();
+        function showLoginScreen() {
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('configScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+        }
+
+        function showConfigScreen() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('configScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+        }
+
+        function showMainApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('configScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+        }
+
+        function showSupabaseConfig() {
+            showConfigScreen();
             
-            const checkResults = document.getElementById('checkResults');
-            checkResults.innerHTML = '';
+            // Rellenar campos si ya hay datos
+            const url = localStorage.getItem('supabase_url');
+            const key = localStorage.getItem('supabase_key');
             
-            addCheckResult('⏳ Cargando librería Supabase...', 'info');
+            if (url) document.getElementById('supabaseUrl').value = url;
+            if (key) document.getElementById('supabaseKey').value = key;
+        }
+
+        function showLoginTab(tab) {
+            const signinForm = document.getElementById('signinForm');
+            const signupForm = document.getElementById('signupForm');
+            const signinTab = document.getElementById('signinTab');
+            const signupTab = document.getElementById('signupTab');
             
-            try {
-                await loadSupabase();
-                addCheckResult('✅ Librería Supabase cargada', 'success');
-            } catch (error) {
-                addCheckResult('❌ Error cargando Supabase: ' + error.message, 'error');
+            if (tab === 'signin') {
+                signinForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                signinTab.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                signupTab.style.background = '#6c757d';
+            } else {
+                signinForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                signupTab.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                signinTab.style.background = '#6c757d';
+            }
+        }
+
+        async function signUp() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const name = document.getElementById('signupName').value;
+            const role = document.getElementById('signupRole').value;
+            
+            if (!email || !password || !name || !role) {
+                showAuthStatus('error', '❌ Todos los campos son obligatorios');
                 return;
             }
             
+            if (password.length < SECURITY_CONFIG.passwordMinLength) {
+                showAuthStatus('error', `❌ La contraseña debe tener al menos ${SECURITY_CONFIG.passwordMinLength} caracteres`);
+                return;
+            }
+
+            // Verificar si hay configuración de Supabase
+            if (!supabaseConfigured) {
+                showAuthStatus('error', '❌ Primero debes configurar la conexión a Supabase');
+                return;
+            }
+            
+            try {
+                showAuthStatus('info', '📝 Registrando usuario...');
+                
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            nombre: name,
+                            rol: role
+                        }
+                    }
+                });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                showAuthStatus('success', '✅ Registro exitoso. Puedes iniciar sesión ahora.');
+                showLoginTab('signin');
+                
+            } catch (error) {
+                console.error('Error en registro:', error);
+                showAuthStatus('error', '❌ Error en registro: ' + error.message);
+            }
+        }
+
+        async function signIn() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showAuthStatus('error', '❌ Email y contraseña son obligatorios');
+                return;
+            }
+            
+            if (securityState.loginAttempts >= SECURITY_CONFIG.maxLoginAttempts) {
+                showAuthStatus('error', '🚫 Demasiados intentos de login. Recarga la página.');
+                return;
+            }
+
+            // Verificar si hay configuración de Supabase
+            if (!supabaseConfigured) {
+                // Mostrar pantalla de configuración
+                showConfigScreen();
+                return;
+            }
+            
+            try {
+                showAuthStatus('info', '🔐 Iniciando sesión...');
+                
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) {
+                    securityState.loginAttempts++;
+                    throw error;
+                }
+                
+                securityState.loginAttempts = 0;
+                await handleAuthSuccess(data.user);
+                showMainApp();
+                
+            } catch (error) {
+                console.error('Error en login:', error);
+                showAuthStatus('error', '❌ Error de login: ' + error.message);
+            }
+        }
+
+        async function handleAuthSuccess(user) {
+            currentUser = user;
+            
+            try {
+                // Intentar obtener o crear perfil
+                const { data: perfil, error: perfilError } = await supabase
+                    .from('perfiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (perfil) {
+                    userRole = perfil.rol;
+                } else {
+                    // Crear perfil si no existe
+                    userRole = user.user_metadata.rol || 'viewer';
+                    await supabase
+                        .from('perfiles')
+                        .insert([{
+                            id: user.id,
+                            nombre: user.user_metadata.nombre || user.email,
+                            email: user.email,
+                            rol: userRole
+                        }]);
+                }
+                
+                setupUserInterface();
+                
+            } catch (error) {
+                console.error('Error manejando usuario:', error);
+                // Continuar con datos básicos del usuario
+                userRole = user.user_metadata.rol || 'viewer';
+                setupUserInterface();
+            }
+        }
+
+        function setupUserInterface() {
+            // Información del usuario
+            document.getElementById('userAvatar').textContent = currentUser.user_metadata.nombre ? 
+                currentUser.user_metadata.nombre.charAt(0).toUpperCase() : 
+                currentUser.email.charAt(0).toUpperCase();
+            
+            document.getElementById('userName').textContent = 
+                currentUser.user_metadata.nombre || currentUser.email;
+            
+            document.getElementById('userEmail').textContent = currentUser.email;
+            
+            // Badge de rol
+            const roleBadge = document.getElementById('userRole');
+            roleBadge.textContent = getRoleDisplayName(userRole);
+            roleBadge.className = `role-badge role-${userRole}`;
+            
+            // Permisos
+            setupPermissions();
+            
+            // Campo inspector automático
+            const inspectorField = document.getElementById('inspector');
+            if (inspectorField) {
+                inspectorField.value = currentUser.user_metadata.nombre || currentUser.email;
+            }
+        }
+
+        function setupPermissions() {
+            const canCreate = ['admin', 'inspector'].includes(userRole);
+            
+            const inspectForm = document.getElementById('inspectionForm');
+            const accessDenied = document.getElementById('inspectAccessDenied');
+            
+            if (canCreate) {
+                inspectForm.style.display = 'block';
+                accessDenied.classList.add('hidden');
+            } else {
+                inspectForm.style.display = 'none';
+                accessDenied.classList.remove('hidden');
+            }
+        }
+
+        function getRoleDisplayName(role) {
+            const roles = {
+                'admin': '👑 Administrador',
+                'inspector': '🔧 Inspector',
+                'viewer': '👁️ Visualizador'
+            };
+            return roles[role] || '❓ Desconocido';
+        }
+
+        async function signOut() {
+            try {
+                if (supabase) {
+                    const { error } = await supabase.auth.signOut();
+                    if (error) throw error;
+                }
+                
+                handleSignOut();
+                
+            } catch (error) {
+                console.error('Error cerrando sesión:', error);
+                handleSignOut();
+            }
+        }
+
+        function handleSignOut() {
+            currentUser = null;
+            userRole = null;
+            
+            showLoginScreen();
+            
+            // Limpiar formularios
+            document.getElementById('inspectionForm').reset();
+            selectedPhotos = [];
+            updatePhotoPreview();
+        }
+
+        function showAuthStatus(type, message) {
+            const status = document.getElementById('authStatus');
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+            
+            setTimeout(() => {
+                status.innerHTML = '';
+            }, 5000);
+        }
+
+        // Configuración de Supabase
+        async function testSupabaseConnection() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+            
             if (!url || !key) {
-                addCheckResult('❌ URL o clave faltante', 'error');
+                showSupabaseStatus('error', '❌ Por favor, completa ambos campos');
                 return;
             }
             
             if (!url.startsWith('https://')) {
-                addCheckResult('❌ URL debe empezar con https://', 'error');
+                showSupabaseStatus('error', '❌ La URL debe empezar con https://');
                 return;
             }
             
             if (!key.startsWith('eyJ')) {
-                addCheckResult('❌ La clave debe empezar con "eyJ"', 'error');
+                showSupabaseStatus('error', '❌ La clave debe empezar con "eyJ"');
                 return;
             }
             
-            addCheckResult('✅ Formato correcto', 'success');
-            
             try {
-                supabase = window.supabase.createClient(url, key);
-                addCheckResult('✅ Cliente Supabase creado', 'success');
+                showSupabaseStatus('info', '🔗 Probando conexión...');
                 
-                const { data, error } = await supabase
+                const testClient = window.supabase.createClient(url, key);
+                
+                const { data, error } = await testClient
                     .from('inspecciones')
                     .select('count', { count: 'exact', head: true });
                 
-                if (error) {
-                    if (error.code === 'PGRST116') {
-                        addCheckResult('❌ Tabla "inspecciones" no existe. Ejecuta el SQL', 'error');
-                    } else {
-                        addCheckResult('❌ Error: ' + error.message, 'error');
-                    }
-                    return;
+                if (error && error.code === 'PGRST116') {
+                    showSupabaseStatus('warning', '⚠️ Conexión OK, pero tabla "inspecciones" no existe. Ejecuta el SQL de creación.');
+                } else if (error) {
+                    throw error;
+                } else {
+                    showSupabaseStatus('success', '✅ Conexión exitosa');
                 }
                 
-                addCheckResult('✅ Conexión exitosa', 'success');
-                addCheckResult(`ℹ️ Registros: ${data || 0}`, 'info');
-                connectionStatus = 'connected';
-                updateConnectionIndicator('success', '✅ Conexión verificada');
-                updateTabsVisibility();
-                
             } catch (error) {
-                addCheckResult('❌ Error de conexión: ' + error.message, 'error');
+                showSupabaseStatus('error', '❌ Error de conexión: ' + error.message);
             }
         }
 
-        function addCheckResult(message, type) {
-            const div = document.createElement('div');
-            div.className = `status ${type}`;
-            div.textContent = message;
-            document.getElementById('checkResults').appendChild(div);
+        async function saveSupabaseConfig() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+            
+            if (!url || !key) {
+                showSupabaseStatus('error', '❌ Por favor, completa ambos campos');
+                return;
+            }
+            
+            try {
+                localStorage.setItem('supabase_url', url);
+                localStorage.setItem('supabase_key', key);
+                
+                await initSupabase(url, key);
+                
+                showSupabaseStatus('success', '✅ Configuración guardada');
+                
+                // Si hay usuario autenticado, ir a app principal
+                if (currentUser) {
+                    showMainApp();
+                } else {
+                    showLoginScreen();
+                }
+                
+            } catch (error) {
+                showSupabaseStatus('error', '❌ Error guardando configuración: ' + error.message);
+            }
         }
 
-        function showStatus(type, message) {
-            const status = document.getElementById('connectionStatus');
-            if (status) {
-                status.innerHTML = `<div class="status ${type}">${message}</div>`;
+        function showSupabaseStatus(type, message) {
+            const status = document.getElementById('supabaseStatus');
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            const targetTab = document.getElementById(tabName + '-tab');
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+            
+            const tabs = document.querySelectorAll('.tab');
+            if (tabName === 'inspect') tabs[0].classList.add('active');
+            else if (tabName === 'data') tabs[1].classList.add('active');
+            
+            if (tabName === 'data' && supabaseConfigured) {
+                loadInspections();
             }
         }
 
@@ -773,8 +1118,18 @@
                 form.addEventListener('submit', async function(e) {
                     e.preventDefault();
                     
-                    if (connectionStatus !== 'connected') {
+                    if (!supabaseConfigured) {
                         alert('❌ No hay conexión con la base de datos');
+                        return;
+                    }
+                    
+                    if (!currentUser) {
+                        alert('🚫 Debes estar autenticado');
+                        return;
+                    }
+                    
+                    if (!['admin', 'inspector'].includes(userRole)) {
+                        alert('🚫 No tienes permisos para crear inspecciones');
                         return;
                     }
                     
@@ -788,6 +1143,7 @@
                     }
                     
                     const formData = {
+                        user_id: currentUser.id,
                         inspector: document.getElementById('inspector').value,
                         modelo: document.getElementById('modelo').value,
                         trazabilidad: document.getElementById('trazabilidad').value,
@@ -849,7 +1205,11 @@
             if (uploadSection) {
                 uploadSection.addEventListener('dragover', handleDragOver);
                 uploadSection.addEventListener('drop', handleDrop);
-                uploadSection.addEventListener('click', () => fotosInput.click());
+                uploadSection.addEventListener('click', (e) => {
+                    if (e.target === uploadSection || e.target.tagName === 'P') {
+                        fotosInput.click();
+                    }
+                });
             }
         }
 
@@ -926,7 +1286,7 @@
             updatePhotoPreview();
         }
 
-        // Guardar fotos (simplificado)
+        // Guardar fotos
         async function savePhotos(inspectionId, photos) {
             for (let i = 0; i < photos.length; i++) {
                 const photo = photos[i];
@@ -936,6 +1296,7 @@
                         .from('fotos')
                         .insert([{
                             inspeccion_id: inspectionId,
+                            user_id: currentUser.id,
                             nombre_archivo: photo.name,
                             datos_imagen: photo.data
                         }]);
@@ -969,8 +1330,12 @@
 
             window.onclick = function(event) {
                 const modal = document.getElementById('imageModal');
+                const editModal = document.getElementById('editModal');
                 if (event.target === modal) {
                     modal.style.display = 'none';
+                }
+                if (event.target === editModal) {
+                    editModal.style.display = 'none';
                 }
             };
         });
@@ -979,11 +1344,17 @@
             document.getElementById('inspectionForm').reset();
             selectedPhotos = [];
             updatePhotoPreview();
+            
+            // Restaurar el nombre del inspector
+            const inspectorField = document.getElementById('inspector');
+            if (inspectorField && currentUser) {
+                inspectorField.value = currentUser.user_metadata.nombre || currentUser.email;
+            }
         }
 
         // Cargar inspecciones
         async function loadInspections() {
-            if (connectionStatus !== 'connected') {
+            if (!supabaseConfigured) {
                 document.getElementById('inspectionsList').innerHTML = 
                     '<div class="status error">❌ No hay conexión con la base de datos</div>';
                 return;
@@ -1077,6 +1448,9 @@
                                        insp.estado_maquina === 'reparar' ? '🔧 REPARAR' : 
                                        insp.estado_maquina === 'critico' ? '🚨 CRÍTICO' : '⏳ PENDIENTE';
                     
+                    // Verificar permisos de edición
+                    const canEdit = userRole === 'admin' || insp.user_id === currentUser.id;
+                    
                     html += `
                         <div class="inspection-card ${insp.completada ? 'completed' : ''}">
                             <div class="priority-badge" style="background: ${prioridadColor};">
@@ -1129,21 +1503,25 @@
                                 </div>
                                 
                                 <div>
-                                    <button class="btn" onclick="editInspection(${insp.id})" style="padding: 8px 16px; margin: 0 5px 0 0;">
-                                        ✏️ Editar
-                                    </button>
-                                    ${!insp.completada ? `
-                                        <button class="btn btn-success" onclick="markAsCompleted(${insp.id})" style="padding: 8px 16px; margin: 0;">
-                                            ✅ Completar
+                                    ${canEdit ? `
+                                        <button class="btn" onclick="editInspection(${insp.id})" style="padding: 8px 16px; margin: 0 5px 0 0;">
+                                            ✏️ Editar
+                                        </button>
+                                        ${!insp.completada ? `
+                                            <button class="btn btn-success" onclick="markAsCompleted(${insp.id})" style="padding: 8px 16px; margin: 0;">
+                                                ✅ Completar
+                                            </button>
+                                        ` : `
+                                            <button class="btn btn-warning" onclick="markAsPending(${insp.id})" style="padding: 8px 16px; margin: 0;">
+                                                🔄 Pendiente
+                                            </button>
+                                        `}
+                                        <button class="btn btn-danger" onclick="deleteInspection(${insp.id})" style="padding: 8px 16px; margin-left: 5px;">
+                                            🗑️ Eliminar
                                         </button>
                                     ` : `
-                                        <button class="btn btn-warning" onclick="markAsPending(${insp.id})" style="padding: 8px 16px; margin: 0;">
-                                            🔄 Pendiente
-                                        </button>
+                                        <div style="color: #666; font-size: 12px;">🔒 Solo lectura</div>
                                     `}
-                                    <button class="btn btn-danger" onclick="deleteInspection(${insp.id})" style="padding: 8px 16px; margin-left: 5px;">
-                                        🗑️ Eliminar
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1465,25 +1843,10 @@
             }
         }
 
-        function clearLocalData() {
-            if (confirm('¿Estás seguro de que quieres limpiar la configuración guardada?\n\nTendrás que volver a configurar la conexión.')) {
-                localStorage.removeItem('supabase_url');
-                localStorage.removeItem('supabase_key');
-                document.getElementById('configSupabaseUrl').value = '';
-                document.getElementById('configSupabaseKey').value = '';
-                connectionStatus = 'disconnected';
-                supabase = null;
-                
-                updateConnectionIndicator('warning', '⚙️ Configuración limpiada');
-                updateTabsVisibility();
-                showStatus('info', 'Configuración limpiada correctamente');
-            }
-        }
-
         // Inicializar aplicación al cargar la página
         window.addEventListener('load', () => {
             console.log('🚀 Iniciando sistema...');
-            loadSavedCredentials();
+            initializeApp();
         });
     </script>
 </body>
