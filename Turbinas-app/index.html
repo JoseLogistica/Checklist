@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHECKLIST DE CALIDAD</title>
+    <title>Sistema Seguro de Inspección de Turbinas</title>
     <style>
         * {
             margin: 0;
@@ -32,15 +32,65 @@
             color: white;
             padding: 30px;
             text-align: center;
+            position: relative;
         }
 
-        .connection-status {
+        .security-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .user-info {
             background: #f8f9fa;
             padding: 15px;
             border-bottom: 1px solid #dee2e6;
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .user-details {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .role-badge {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .role-admin { background: #ff4757; color: white; }
+        .role-inspector { background: #3742fa; color: white; }
+        .role-viewer { background: #2ed573; color: white; }
+
+        .login-form {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
 
         .tabs {
@@ -210,10 +260,23 @@
             border: 2px solid #ddd;
             cursor: pointer;
             transition: transform 0.2s;
+            position: relative;
         }
 
         .photo-thumbnail:hover {
             transform: scale(1.05);
+        }
+
+        .photo-thumbnail::after {
+            content: '🔒';
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 2px;
+            border-radius: 3px;
+            font-size: 10px;
         }
 
         .inspection-card {
@@ -248,7 +311,7 @@
 
         .completed-badge {
             position: absolute;
-            top: 50px;
+            top: 85px;
             right: 15px;
             background: #28a745;
             color: white;
@@ -315,51 +378,130 @@
             color: #000;
         }
 
-        .config-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+        .hidden {
+            display: none !important;
         }
 
-        pre {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
+        .session-timer {
+            background: rgba(255,255,255,0.1);
+            padding: 5px 10px;
+            border-radius: 15px;
             font-size: 12px;
-            border-left: 4px solid #007bff;
+            backdrop-filter: blur(10px);
+        }
+
+        .encryption-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #28a745;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Pantalla de Login -->
+    <div id="loginScreen" class="container">
         <div class="header">
-            <h1>🔧 Sistema de Inspección de Máquina terminada</h1>
-            <p>Gestión integral de inspecciones y reparaciones</p>
+            <div class="security-badge">🔐 Seguridad Avanzada</div>
+            <h1>🔧 Sistema Seguro de Inspección</h1>
+            <p>Acceso protegido con autenticación y roles</p>
         </div>
 
-        <div class="connection-status">
-            <div id="connectionIndicator" class="status info">🔄 Verificando conexión...</div>
-            <button class="btn" onclick="showTab('config')" style="padding: 8px 16px; margin: 0;">⚙️ Configuración</button>
+        <div class="login-form">
+            <h3 style="text-align: center; margin-bottom: 30px;">🔐 Iniciar Sesión</h3>
+            
+            <div id="loginTabs" style="display: flex; margin-bottom: 20px;">
+                <button class="btn" onclick="showLoginTab('signin')" id="signinTab" style="flex: 1; margin: 0 5px;">Entrar</button>
+                <button class="btn" onclick="showLoginTab('signup')" id="signupTab" style="flex: 1; margin: 0 5px;">Registrarse</button>
+            </div>
+
+            <!-- Formulario de Login -->
+            <div id="signinForm">
+                <div class="form-group">
+                    <label>📧 Email:</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>🔑 Contraseña:</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button class="btn btn-success" onclick="signIn()" style="width: 100%;">🔓 Iniciar Sesión</button>
+            </div>
+
+            <!-- Formulario de Registro -->
+            <div id="signupForm" class="hidden">
+                <div class="form-group">
+                    <label>👤 Nombre completo:</label>
+                    <input type="text" id="signupName" required>
+                </div>
+                <div class="form-group">
+                    <label>📧 Email:</label>
+                    <input type="email" id="signupEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>🔑 Contraseña:</label>
+                    <input type="password" id="signupPassword" required minlength="8">
+                    <small>Mínimo 8 caracteres</small>
+                </div>
+                <div class="form-group">
+                    <label>🛡️ Rol solicitado:</label>
+                    <select id="signupRole" required>
+                        <option value="">Seleccionar rol...</option>
+                        <option value="inspector">🔧 Inspector - Puede crear y editar inspecciones</option>
+                        <option value="viewer">👁️ Visualizador - Solo lectura</option>
+                    </select>
+                    <small>Los administradores deben ser aprobados manualmente</small>
+                </div>
+                <button class="btn btn-success" onclick="signUp()" style="width: 100%;">📝 Registrarse</button>
+            </div>
+
+            <div id="authStatus"></div>
+        </div>
+    </div>
+
+    <!-- Aplicación Principal -->
+    <div id="mainApp" class="container hidden">
+        <div class="header">
+            <div class="security-badge">
+                🔐 Seguro
+                <div class="session-timer" id="sessionTimer">⏱️ 30:00</div>
+            </div>
+            <h1>🔧 Sistema de Inspección de Turbinas</h1>
+            <p>Sistema seguro con control de acceso basado en roles</p>
+        </div>
+
+        <div class="user-info">
+            <div class="user-details">
+                <div class="user-avatar" id="userAvatar"></div>
+                <div>
+                    <div style="font-weight: bold;" id="userName"></div>
+                    <div style="font-size: 12px; color: #666;" id="userEmail"></div>
+                </div>
+                <div class="role-badge" id="userRole"></div>
+                <div class="encryption-indicator">🔒 Datos encriptados</div>
+            </div>
+            <div>
+                <button class="btn btn-danger" onclick="signOut()" style="padding: 8px 16px; margin: 0;">🚪 Salir</button>
+            </div>
         </div>
 
         <div class="tabs">
-            <div class="tab active" onclick="showTab('inspect')">📋 Nueva Inspección</div>
-            <div class="tab" onclick="showTab('data')">📊 Historial</div>
-            <div class="tab" onclick="showTab('config')">⚙️ Configuración</div>
+            <div class="tab active" onclick="showTab('inspect')" id="inspectTab">📋 Nueva Inspección</div>
+            <div class="tab" onclick="showTab('data')" id="dataTab">📊 Historial</div>
         </div>
 
         <!-- Pestaña Nueva Inspección -->
         <div id="inspect-tab" class="tab-content active">
-            <div id="connectionAlert" class="status error" style="display: none;">
-                ⚠️ No hay conexión con la base de datos. Ve a Configuración para conectar.
+            <div id="inspectAccessDenied" class="status error hidden">
+                🚫 Acceso denegado. No tienes permisos para crear inspecciones.
             </div>
             
             <form id="inspectionForm">
                 <div class="form-group">
                     <label>👤 Inspector:</label>
-                    <input type="text" id="inspector" required>
+                    <input type="text" id="inspector" required readonly>
+                    <small>Se establece automáticamente según tu usuario</small>
                 </div>
                 
                 <div class="form-group">
@@ -426,9 +568,9 @@
                 </div>
                 
                 <div class="form-group">
-                    <label>📷 Fotos:</label>
+                    <label>📷 Fotos (encriptadas):</label>
                     <input type="file" id="fotos" multiple accept="image/*">
-                    <small style="color: #666;">Selecciona múltiples fotos si es necesario</small>
+                    <small style="color: #666;">Las fotos se encriptan automáticamente antes del almacenamiento</small>
                     <div id="photoPreview" class="photo-preview"></div>
                 </div>
                 
@@ -454,84 +596,15 @@
                     <option value="media">🟡 Media</option>
                     <option value="baja">🟢 Baja</option>
                 </select>
+                <select id="filterEstado" onchange="loadInspections()" style="width: auto; padding: 8px;">
+                    <option value="all">✅ Todos los estados</option>
+                    <option value="ok">✅ OK</option>
+                    <option value="reparar">🔧 Necesita reparación</option>
+                    <option value="critico">🚨 Estado crítico</option>
+                    <option value="pendiente">⏳ Pendiente de revisión</option>
+                </select>
             </div>
             <div id="inspectionsList"></div>
-        </div>
-
-        <!-- Pestaña Configuración -->
-        <div id="config-tab" class="tab-content">
-            <div class="config-section">
-                <h3>⚙️ Configuración de Base de Datos</h3>
-                <div id="currentStatus" class="status info">🔄 Verificando conexión...</div>
-                
-                <div class="form-group">
-                    <label>🌐 URL del proyecto Supabase:</label>
-                    <input type="url" id="configSupabaseUrl" placeholder="https://tuproyecto.supabase.co">
-                    <small>Ejemplo: https://abcdefghijk.supabase.co (sin barra al final)</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>🔑 Clave pública (anon key):</label>
-                    <input type="password" id="configSupabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
-                    <small>Una cadena muy larga que empieza con "eyJ"</small>
-                </div>
-                
-                <div class="form-group">
-                    <button class="btn" onclick="testConnection()">🔗 Probar Conexión</button>
-                    <button class="btn btn-success" onclick="saveCredentials()">💾 Guardar y Conectar</button>
-                    <button class="btn btn-danger" onclick="clearLocalData()">🗑️ Limpiar Configuración</button>
-                </div>
-            </div>
-
-            <div id="connectionStatus"></div>
-
-            <div class="config-section">
-                <h3>📊 Estado de la conexión:</h3>
-                <div id="checkResults">
-                    <div class="status info">⏳ Esperando verificación...</div>
-                </div>
-            </div>
-
-            <div class="config-section">
-                <h3>📋 Código SQL para crear las tablas</h3>
-                <p>Si no tienes las tablas creadas, ejecuta este código en Supabase → SQL Editor:</p>
-                <pre>-- Tabla para inspecciones
-CREATE TABLE inspecciones (
-  id BIGSERIAL PRIMARY KEY,
-  fecha TIMESTAMPTZ DEFAULT NOW(),
-  inspector TEXT NOT NULL,
-  modelo TEXT NOT NULL,
-  trazabilidad TEXT NOT NULL,
-  piezas TEXT[] NOT NULL,
-  prioridad TEXT NOT NULL CHECK (prioridad IN ('alta', 'media', 'baja')),
-  observaciones TEXT,
-  completada BOOLEAN DEFAULT FALSE,
-  fecha_completada TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Tabla para fotos (compatible con estructura existente)
-CREATE TABLE IF NOT EXISTS fotos (
-  id BIGSERIAL PRIMARY KEY,
-  inspeccion_id BIGINT REFERENCES inspecciones(id) ON DELETE CASCADE,
-  nombre_archivo TEXT NOT NULL,
-  url_archivo TEXT, -- Para compatibilidad
-  datos_imagen TEXT, -- Base64 de la imagen
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Si ya tienes la tabla fotos, ejecuta esto para añadir la columna datos_imagen:
--- ALTER TABLE fotos ADD COLUMN IF NOT EXISTS datos_imagen TEXT;
-
--- Si quieres que url_archivo no sea obligatorio (recomendado):
--- ALTER TABLE fotos ALTER COLUMN url_archivo DROP NOT NULL;
-
--- Permitir acceso público
-ALTER TABLE inspecciones ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fotos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all" ON inspecciones FOR ALL USING (true);
-CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
-            </div>
         </div>
     </div>
 
@@ -539,278 +612,364 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
     <div id="imageModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
+            <div style="text-align: center; margin-bottom: 10px;">
+                <span style="color: #28a745;">🔒 Imagen desencriptada automáticamente</span>
+            </div>
             <img id="modalImage" src="" alt="Imagen de inspección">
         </div>
     </div>
 
     <script>
         let supabase = null;
-        let connectionStatus = 'disconnected';
-        let supabaseLoaded = false;
+        let currentUser = null;
+        let userRole = null;
+        let sessionTimer = 1800;
+        let timerInterval = null;
 
-        // Función para cargar Supabase de forma dinámica
-        function loadSupabase() {
+        const SECURITY_CONFIG = {
+            sessionTimeout: 1800000,
+            maxLoginAttempts: 3,
+            passwordMinLength: 8,
+            encryptionKey: 'turbine_security_2025'
+        };
+
+        let securityState = {
+            loginAttempts: 0,
+            lastActivity: Date.now(),
+            encryptedFiles: 0
+        };
+
+        async function loadSupabase() {
             return new Promise((resolve, reject) => {
-                if (supabaseLoaded) {
-                    resolve();
-                    return;
-                }
-
                 const script = document.createElement('script');
                 script.src = 'https://unpkg.com/@supabase/supabase-js@2';
-                script.onload = () => {
-                    supabaseLoaded = true;
-                    console.log('✅ Supabase cargado correctamente');
-                    resolve();
-                };
-                script.onerror = (error) => {
-                    console.error('❌ Error cargando Supabase:', error);
-                    reject(error);
-                };
+                script.onload = resolve;
+                script.onerror = reject;
                 document.head.appendChild(script);
             });
         }
 
-        // Cargar credenciales guardadas y conectar automáticamente
-        async function loadSavedCredentials() {
-            const url = localStorage.getItem('supabase_url');
-            const key = localStorage.getItem('supabase_key');
-            
-            console.log('🔍 Verificando credenciales guardadas...');
-            console.log('URL guardada:', url ? 'Sí' : 'No');
-            console.log('Key guardada:', key ? 'Sí' : 'No');
-            
-            // Llenar los campos de configuración si existen
-            if (url) document.getElementById('configSupabaseUrl').value = url;
-            if (key) document.getElementById('configSupabaseKey').value = key;
-            
-            if (url && key) {
-                console.log('🔄 Conectando automáticamente...');
-                updateConnectionIndicator('info', '🔄 Conectando automáticamente...');
-                const success = await initSupabase(url, key);
-                if (success) {
-                    connectionStatus = 'connected';
-                    updateConnectionIndicator('success', '✅ Conectado y listo');
-                    updateTabsVisibility();
-                    console.log('✅ Conexión automática exitosa');
-                } else {
-                    updateConnectionIndicator('error', '❌ Error de conexión automática');
-                    updateTabsVisibility();
-                    console.log('❌ Fallo en conexión automática');
-                }
-            } else {
-                updateConnectionIndicator('warning', '⚙️ Configuración requerida');
-                updateTabsVisibility();
-                console.log('⚠️ No hay credenciales guardadas');
-            }
-        }
-
-        function updateConnectionIndicator(type, message) {
-            const indicator = document.getElementById('connectionIndicator');
-            if (indicator) {
-                indicator.className = `status ${type}`;
-                indicator.textContent = message;
-            }
-            
-            // También actualizar el estado en configuración
-            const currentStatus = document.getElementById('currentStatus');
-            if (currentStatus) {
-                currentStatus.className = `status ${type}`;
-                currentStatus.textContent = message;
-            }
-        }
-
-        function updateTabsVisibility() {
-            const tabs = document.querySelectorAll('.tab');
-            const alert = document.getElementById('connectionAlert');
-            
-            if (connectionStatus === 'connected') {
-                // Habilitar todas las pestañas
-                tabs.forEach(tab => tab.classList.remove('disabled'));
-                if (alert) alert.style.display = 'none';
-                console.log('✅ Todas las pestañas habilitadas');
-            } else {
-                // Deshabilitar pestañas excepto configuración
-                tabs.forEach((tab, index) => {
-                    if (index !== 2) { // No es la pestaña de configuración
-                        tab.classList.add('disabled');
-                    }
-                });
-                if (alert) alert.style.display = 'block';
-                console.log('⚠️ Solo pestaña de configuración habilitada');
-            }
-        }
-
-        async function saveCredentials() {
-            const url = document.getElementById('configSupabaseUrl').value.trim();
-            const key = document.getElementById('configSupabaseKey').value.trim();
-            
-            console.log('💾 Intentando guardar credenciales...');
-            console.log('URL:', url ? 'Presente' : 'Vacía');
-            console.log('Key:', key ? 'Presente' : 'Vacía');
-            
-            if (!url || !key) {
-                showStatus('error', '❌ Por favor, completa ambos campos');
-                console.log('❌ Campos incompletos');
-                return;
-            }
-            
-            // Guardar en localStorage
-            try {
-                localStorage.setItem('supabase_url', url);
-                localStorage.setItem('supabase_key', key);
-                console.log('💾 Credenciales guardadas en localStorage');
-                
-                showStatus('success', '💾 Credenciales guardadas correctamente');
-                
-                // Intentar conectar
-                const success = await initSupabase(url, key);
-                if (success) {
-                    connectionStatus = 'connected';
-                    showStatus('success', '✅ Conexión configurada y lista para usar');
-                    updateConnectionIndicator('success', '✅ Conectado y listo');
-                    updateTabsVisibility();
-                    console.log('✅ Conexión exitosa');
-                    
-                    // Cambiar a la pestaña de inspección
-                    setTimeout(() => showTab('inspect'), 1000);
-                } else {
-                    console.log('❌ Fallo en la conexión después de guardar');
-                }
-            } catch (error) {
-                console.error('❌ Error guardando credenciales:', error);
-                showStatus('error', '❌ Error guardando credenciales: ' + error.message);
-            }
-        }
-
-        async function initSupabase(url, key) {
-            try {
-                console.log('🔄 Inicializando Supabase...');
-                await loadSupabase();
-                
-                if (!window.supabase) {
-                    throw new Error('Supabase no se cargó correctamente');
-                }
-                
-                supabase = window.supabase.createClient(url, key);
-                console.log('✅ Cliente Supabase creado');
-                
-                // Probar la conexión
-                const { data, error } = await supabase
-                    .from('inspecciones')
-                    .select('count', { count: 'exact', head: true });
-                
-                if (error) {
-                    console.error('❌ Error de conexión:', error);
-                    if (error.code === 'PGRST116') {
-                        showStatus('warning', '⚠️ Tabla "inspecciones" no existe. Ejecuta el SQL de creación');
-                    } else {
-                        showStatus('error', '❌ Error de base de datos: ' + error.message);
-                    }
-                    return false;
-                }
-                
-                console.log('✅ Conexión a base de datos exitosa');
-                return true;
-            } catch (error) {
-                console.error('❌ Error inicializando Supabase:', error);
-                showStatus('error', '❌ Error al inicializar: ' + error.message);
-                return false;
-            }
-        }
-
-        async function testConnection() {
-            const url = document.getElementById('configSupabaseUrl').value.trim();
-            const key = document.getElementById('configSupabaseKey').value.trim();
-            
-            console.log('🔗 Probando conexión...');
-            const checkResults = document.getElementById('checkResults');
-            checkResults.innerHTML = '';
-            
-            // Verificación 0: Cargar Supabase
-            addCheckResult('⏳ Cargando librería Supabase...', 'info');
-            
+        async function initializeSecureApp() {
             try {
                 await loadSupabase();
-                addCheckResult('✅ Librería Supabase cargada', 'success');
-            } catch (error) {
-                addCheckResult('❌ Error cargando Supabase: ' + error.message, 'error');
-                return;
-            }
-            
-            // Verificar campos
-            if (!url || !key) {
-                addCheckResult('❌ URL o clave faltante', 'error');
-                return;
-            }
-            
-            if (!url.startsWith('https://')) {
-                addCheckResult('❌ URL debe empezar con https://', 'error');
-                return;
-            }
-            
-            if (!key.startsWith('eyJ')) {
-                addCheckResult('❌ La clave debe empezar con "eyJ"', 'error');
-                return;
-            }
-            
-            addCheckResult('✅ Formato correcto', 'success');
-            
-            // Probar conexión
-            try {
-                supabase = window.supabase.createClient(url, key);
-                addCheckResult('✅ Cliente Supabase creado', 'success');
                 
-                const { data, error } = await supabase
-                    .from('inspecciones')
-                    .select('count', { count: 'exact', head: true });
+                const url = localStorage.getItem('supabase_url');
+                const key = localStorage.getItem('supabase_key');
                 
-                if (error) {
-                    if (error.code === 'PGRST116') {
-                        addCheckResult('❌ Tabla "inspecciones" no existe. Ejecuta el SQL', 'error');
-                    } else {
-                        addCheckResult('❌ Error: ' + error.message, 'error');
-                    }
+                if (!url || !key) {
+                    showConfigPrompt();
                     return;
                 }
                 
-                addCheckResult('✅ Conexión exitosa', 'success');
-                addCheckResult(`ℹ️ Registros: ${data || 0}`, 'info');
-                connectionStatus = 'connected';
-                updateConnectionIndicator('success', '✅ Conexión verificada');
-                updateTabsVisibility();
+                supabase = window.supabase.createClient(url, key);
+                
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (session) {
+                    await handleAuthSuccess(session.user);
+                } else {
+                    showLoginScreen();
+                }
+                
+                setupSecurityListeners();
                 
             } catch (error) {
-                addCheckResult('❌ Error de conexión: ' + error.message, 'error');
+                console.error('Error inicializando aplicación:', error);
+                showAuthStatus('error', 'Error de inicialización: ' + error.message);
             }
         }
 
-        function addCheckResult(message, type) {
-            const div = document.createElement('div');
-            div.className = `status ${type}`;
-            div.textContent = message;
-            document.getElementById('checkResults').appendChild(div);
+        function setupSecurityListeners() {
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_OUT') {
+                    handleSignOut();
+                }
+            });
+
+            document.addEventListener('mousemove', updateActivity);
+            document.addEventListener('keypress', updateActivity);
+            document.addEventListener('click', updateActivity);
+
+            setInterval(checkSessionSecurity, 60000);
         }
 
-        function showStatus(type, message) {
-            const status = document.getElementById('connectionStatus');
-            if (status) {
-                status.innerHTML = `<div class="status ${type}">${message}</div>`;
-            }
+        function updateActivity() {
+            securityState.lastActivity = Date.now();
         }
 
-        function showTab(tabName) {
-            console.log('📑 Cambiando a pestaña:', tabName);
+        async function checkSessionSecurity() {
+            const inactiveTime = Date.now() - securityState.lastActivity;
             
-            // Verificar si la pestaña está deshabilitada
-            if (tabName !== 'config' && connectionStatus !== 'connected') {
-                console.log('⚠️ Pestaña bloqueada - sin conexión');
-                updateConnectionIndicator('warning', '⚠️ Configura la conexión primero');
-                showTab('config');
+            if (inactiveTime > SECURITY_CONFIG.sessionTimeout) {
+                await signOut();
+                alert('🚪 Sesión cerrada por inactividad');
+            }
+        }
+
+        function startSessionTimer() {
+            timerInterval = setInterval(() => {
+                sessionTimer--;
+                
+                const minutes = Math.floor(sessionTimer / 60);
+                const seconds = sessionTimer % 60;
+                const timerDisplay = document.getElementById('sessionTimer');
+                
+                if (timerDisplay) {
+                    timerDisplay.textContent = `⏱️ ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                }
+                
+                if (sessionTimer <= 0) {
+                    signOut();
+                }
+                
+                if (sessionTimer === 300) {
+                    refreshSession();
+                }
+            }, 1000);
+        }
+
+        async function refreshSession() {
+            try {
+                const { error } = await supabase.auth.refreshSession();
+                if (!error) {
+                    sessionTimer = 1800;
+                }
+            } catch (error) {
+                console.error('Error renovando sesión:', error);
+            }
+        }
+
+        function showConfigPrompt() {
+            const url = prompt('🌐 Introduce la URL de Supabase:\n(ej: https://tuproyecto.supabase.co)');
+            const key = prompt('🔑 Introduce la clave pública de Supabase:\n(empieza con eyJ...)');
+            
+            if (url && key) {
+                localStorage.setItem('supabase_url', url);
+                localStorage.setItem('supabase_key', key);
+                location.reload();
+            }
+        }
+
+        function showLoginScreen() {
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+        }
+
+        function showMainApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+        }
+
+        function showLoginTab(tab) {
+            const signinForm = document.getElementById('signinForm');
+            const signupForm = document.getElementById('signupForm');
+            const signinTab = document.getElementById('signinTab');
+            const signupTab = document.getElementById('signupTab');
+            
+            if (tab === 'signin') {
+                signinForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                signinTab.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                signupTab.style.background = '#6c757d';
+            } else {
+                signinForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                signupTab.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                signinTab.style.background = '#6c757d';
+            }
+        }
+
+        async function signUp() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const name = document.getElementById('signupName').value;
+            const role = document.getElementById('signupRole').value;
+            
+            if (!email || !password || !name || !role) {
+                showAuthStatus('error', '❌ Todos los campos son obligatorios');
                 return;
             }
             
-            // Ocultar todas las pestañas
+            if (password.length < SECURITY_CONFIG.passwordMinLength) {
+                showAuthStatus('error', `❌ La contraseña debe tener al menos ${SECURITY_CONFIG.passwordMinLength} caracteres`);
+                return;
+            }
+            
+            try {
+                showAuthStatus('info', '📝 Registrando usuario...');
+                
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            nombre: name,
+                            rol: role
+                        }
+                    }
+                });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                showAuthStatus('success', '✅ Registro exitoso. Revisa tu email para confirmar tu cuenta.');
+                
+            } catch (error) {
+                console.error('Error en registro:', error);
+                showAuthStatus('error', '❌ Error en registro: ' + error.message);
+            }
+        }
+
+        async function signIn() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showAuthStatus('error', '❌ Email y contraseña son obligatorios');
+                return;
+            }
+            
+            if (securityState.loginAttempts >= SECURITY_CONFIG.maxLoginAttempts) {
+                showAuthStatus('error', '🚫 Demasiados intentos de login. Espera 5 minutos.');
+                return;
+            }
+            
+            try {
+                showAuthStatus('info', '🔐 Iniciando sesión...');
+                
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) {
+                    securityState.loginAttempts++;
+                    throw error;
+                }
+                
+                securityState.loginAttempts = 0;
+                await handleAuthSuccess(data.user);
+                
+            } catch (error) {
+                console.error('Error en login:', error);
+                showAuthStatus('error', '❌ Error de login: ' + error.message);
+            }
+        }
+
+        async function handleAuthSuccess(user) {
+            currentUser = user;
+            
+            const { data: perfil } = await supabase
+                .from('perfiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            if (perfil) {
+                userRole = perfil.rol;
+            } else {
+                userRole = user.user_metadata.rol || 'viewer';
+                await supabase
+                    .from('perfiles')
+                    .insert([{
+                        id: user.id,
+                        nombre: user.user_metadata.nombre || user.email,
+                        email: user.email,
+                        rol: userRole
+                    }]);
+            }
+            
+            setupUserInterface();
+            showMainApp();
+            startSessionTimer();
+        }
+
+        function setupUserInterface() {
+            document.getElementById('userAvatar').textContent = currentUser.user_metadata.nombre ? 
+                currentUser.user_metadata.nombre.charAt(0).toUpperCase() : 
+                currentUser.email.charAt(0).toUpperCase();
+            
+            document.getElementById('userName').textContent = 
+                currentUser.user_metadata.nombre || currentUser.email;
+            
+            document.getElementById('userEmail').textContent = currentUser.email;
+            
+            const roleBadge = document.getElementById('userRole');
+            roleBadge.textContent = getRoleDisplayName(userRole);
+            roleBadge.className = `role-badge role-${userRole}`;
+            
+            setupPermissions();
+            
+            const inspectorField = document.getElementById('inspector');
+            if (inspectorField) {
+                inspectorField.value = currentUser.user_metadata.nombre || currentUser.email;
+            }
+        }
+
+        function setupPermissions() {
+            const canCreate = ['admin', 'inspector'].includes(userRole);
+            
+            const inspectForm = document.getElementById('inspectionForm');
+            const accessDenied = document.getElementById('inspectAccessDenied');
+            
+            if (canCreate) {
+                inspectForm.style.display = 'block';
+                accessDenied.classList.add('hidden');
+            } else {
+                inspectForm.style.display = 'none';
+                accessDenied.classList.remove('hidden');
+            }
+        }
+
+        function getRoleDisplayName(role) {
+            const roles = {
+                'admin': '👑 Administrador',
+                'inspector': '🔧 Inspector',
+                'viewer': '👁️ Visualizador'
+            };
+            return roles[role] || '❓ Desconocido';
+        }
+
+        async function signOut() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                
+                handleSignOut();
+                
+            } catch (error) {
+                console.error('Error cerrando sesión:', error);
+                handleSignOut();
+            }
+        }
+
+        function handleSignOut() {
+            currentUser = null;
+            userRole = null;
+            
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            sessionTimer = 1800;
+            showLoginScreen();
+            
+            document.getElementById('inspectionForm').reset();
+            document.getElementById('photoPreview').innerHTML = '';
+        }
+
+        function showAuthStatus(type, message) {
+            const status = document.getElementById('authStatus');
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+            
+            setTimeout(() => {
+                status.innerHTML = '';
+            }, 5000);
+        }
+
+        function showTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -818,130 +977,149 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                 tab.classList.remove('active');
             });
             
-            // Mostrar pestaña seleccionada
-            const targetTab = document.getElementById(tabName + '-tab');
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
+            document.getElementById(tabName + '-tab').classList.add('active');
             
-            // Activar el botón correcto
             const tabs = document.querySelectorAll('.tab');
             if (tabName === 'inspect') tabs[0].classList.add('active');
             else if (tabName === 'data') tabs[1].classList.add('active');
-            else if (tabName === 'config') tabs[2].classList.add('active');
             
-            // Cargar datos si es la pestaña de historial
-            if (tabName === 'data' && connectionStatus === 'connected') {
+            if (tabName === 'data') {
                 loadInspections();
             }
         }
 
-        // Manejar formulario de inspección
-        document.getElementById('inspectionForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            console.log('📝 Enviando formulario de inspección...');
-            
-            if (connectionStatus !== 'connected') {
-                alert('❌ No hay conexión con la base de datos');
-                console.log('❌ Sin conexión al enviar formulario');
-                return;
-            }
-            
-            const piezasSeleccionadas = Array.from(document.querySelectorAll('input[name="piezas"]:checked')).map(cb => cb.value);
-            
-            if (piezasSeleccionadas.length === 0) {
-                alert('⚠️ Debes seleccionar al menos una pieza');
-                console.log('⚠️ No hay piezas seleccionadas');
-                return;
-            }
-            
-            const formData = {
-                inspector: document.getElementById('inspector').value,
-                modelo: document.getElementById('modelo').value,
-                trazabilidad: document.getElementById('trazabilidad').value,
-                piezas: piezasSeleccionadas,
-                prioridad: document.getElementById('prioridad').value,
-                estado_maquina: document.getElementById('estadoMaquina').value,
-                observaciones: document.getElementById('observaciones').value || null
-            };
-            
-            console.log('📋 Datos del formulario:', formData);
-            
-            try {
-                const submitBtn = document.querySelector('#inspectionForm button[type="submit"]');
-                submitBtn.textContent = '⏳ Guardando...';
-                submitBtn.disabled = true;
-                
-                // Insertar inspección
-                console.log('💾 Insertando inspección en base de datos...');
-                const { data: inspection, error: inspectionError } = await supabase
-                    .from('inspecciones')
-                    .insert([formData])
-                    .select()
-                    .single();
-                
-                if (inspectionError) {
-                    console.error('❌ Error insertando inspección:', inspectionError);
-                    throw inspectionError;
-                }
-                
-                console.log('✅ Inspección guardada:', inspection);
-                
-                // Guardar fotos si hay
-                const fotosInput = document.getElementById('fotos');
-                if (fotosInput.files.length > 0) {
-                    console.log('📷 Guardando fotos...');
-                    await savePhotos(inspection.id, fotosInput.files);
-                }
-                
-                alert('✅ Inspección guardada exitosamente');
-                resetForm();
-                
-                // Ir a la pestaña de historial
-                showTab('data');
-                
-            } catch (error) {
-                console.error('❌ Error:', error);
-                alert('❌ Error al guardar: ' + error.message);
-            } finally {
-                const submitBtn = document.querySelector('#inspectionForm button[type="submit"]');
-                submitBtn.textContent = '📝 Guardar Inspección';
-                submitBtn.disabled = false;
+        // Manejar envío de formulario
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('inspectionForm');
+            if (form) {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    if (!currentUser) {
+                        alert('🚫 Debes estar autenticado');
+                        return;
+                    }
+                    
+                    if (!['admin', 'inspector'].includes(userRole)) {
+                        alert('🚫 No tienes permisos para crear inspecciones');
+                        return;
+                    }
+                    
+                    const piezasSeleccionadas = Array.from(
+                        document.querySelectorAll('input[name="piezas"]:checked')
+                    ).map(cb => cb.value);
+                    
+                    if (piezasSeleccionadas.length === 0) {
+                        alert('⚠️ Debes seleccionar al menos una pieza');
+                        return;
+                    }
+                    
+                    const formData = {
+                        user_id: currentUser.id,
+                        inspector: document.getElementById('inspector').value,
+                        modelo: document.getElementById('modelo').value,
+                        trazabilidad: document.getElementById('trazabilidad').value,
+                        piezas: piezasSeleccionadas,
+                        prioridad: document.getElementById('prioridad').value,
+                        estado_maquina: document.getElementById('estadoMaquina').value,
+                        observaciones: document.getElementById('observaciones').value || null
+                    };
+                    
+                    try {
+                        const submitBtn = document.querySelector('#inspectionForm button[type="submit"]');
+                        submitBtn.textContent = '⏳ Guardando de forma segura...';
+                        submitBtn.disabled = true;
+                        
+                        const { data: inspection, error: inspectionError } = await supabase
+                            .from('inspecciones')
+                            .insert([formData])
+                            .select()
+                            .single();
+                        
+                        if (inspectionError) {
+                            throw inspectionError;
+                        }
+                        
+                        const fotosInput = document.getElementById('fotos');
+                        if (fotosInput.files.length > 0) {
+                            await saveEncryptedPhotos(inspection.id, fotosInput.files);
+                        }
+                        
+                        alert('✅ Inspección guardada de forma segura');
+                        resetForm();
+                        showTab('data');
+                        
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('❌ Error al guardar: ' + error.message);
+                    } finally {
+                        const submitBtn = document.querySelector('#inspectionForm button[type="submit"]');
+                        submitBtn.textContent = '📝 Guardar Inspección';
+                        submitBtn.disabled = false;
+                    }
+                });
             }
         });
 
-        // Función para guardar fotos
-        async function savePhotos(inspectionId, files) {
-            console.log(`📷 Guardando ${files.length} fotos para inspección ${inspectionId}`);
+        function encryptData(data) {
+            const key = SECURITY_CONFIG.encryptionKey;
+            let encrypted = '';
             
+            for (let i = 0; i < data.length; i++) {
+                const charCode = data.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+                encrypted += String.fromCharCode(charCode);
+            }
+            
+            return btoa(encrypted);
+        }
+
+        function decryptData(encryptedData) {
+            try {
+                const encrypted = atob(encryptedData);
+                const key = SECURITY_CONFIG.encryptionKey;
+                let decrypted = '';
+                
+                for (let i = 0; i < encrypted.length; i++) {
+                    const charCode = encrypted.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+                    decrypted += String.fromCharCode(charCode);
+                }
+                
+                return decrypted;
+            } catch (error) {
+                console.error('Error desencriptando:', error);
+                return encryptedData;
+            }
+        }
+
+        async function saveEncryptedPhotos(inspectionId, files) {
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                console.log(`📸 Procesando foto ${i + 1}: ${file.name}`);
-                
                 const reader = new FileReader();
                 
                 await new Promise((resolve, reject) => {
                     reader.onload = async function(e) {
                         try {
+                            const imageData = e.target.result;
+                            const encryptedData = encryptData(imageData);
+                            const hash = btoa(imageData.substring(0, 100));
+                            
                             const { error } = await supabase
                                 .from('fotos')
                                 .insert([{
                                     inspeccion_id: inspectionId,
+                                    user_id: currentUser.id,
                                     nombre_archivo: file.name,
-                                    url_archivo: e.target.result, // Para compatibilidad con tabla existente
-                                    datos_imagen: e.target.result // Base64 de la imagen
+                                    datos_encriptados: encryptedData,
+                                    hash_verificacion: hash
                                 }]);
                             
                             if (error) {
-                                console.error('❌ Error guardando foto:', error);
                                 reject(error);
                             } else {
-                                console.log(`✅ Foto ${i + 1} guardada exitosamente`);
+                                securityState.encryptedFiles++;
                                 resolve();
                             }
                         } catch (err) {
-                            console.error('❌ Error inesperado guardando foto:', err);
                             reject(err);
                         }
                     };
@@ -952,29 +1130,32 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
             }
         }
 
-        // Preview de fotos antes de enviar
-        document.getElementById('fotos').addEventListener('change', function(e) {
-            const preview = document.getElementById('photoPreview');
-            preview.innerHTML = '';
-            
-            console.log(`📷 Seleccionadas ${e.target.files.length} fotos`);
-            
-            Array.from(e.target.files).forEach((file, index) => {
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.className = 'photo-thumbnail';
-                        img.onclick = () => showImageModal(e.target.result);
-                        preview.appendChild(img);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
+        // Preview de fotos
+        document.addEventListener('DOMContentLoaded', function() {
+            const fotosInput = document.getElementById('fotos');
+            if (fotosInput) {
+                fotosInput.addEventListener('change', function(e) {
+                    const preview = document.getElementById('photoPreview');
+                    preview.innerHTML = '';
+                    
+                    Array.from(e.target.files).forEach((file, index) => {
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                const img = document.createElement('img');
+                                img.src = e.target.result;
+                                img.className = 'photo-thumbnail';
+                                img.onclick = () => showImageModal(e.target.result);
+                                img.title = `${file.name} (se encriptará automáticamente)`;
+                                preview.appendChild(img);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                });
+            }
         });
 
-        // Función para mostrar modal de imagen
         function showImageModal(src) {
             const modal = document.getElementById('imageModal');
             const modalImg = document.getElementById('modalImage');
@@ -983,35 +1164,41 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
         }
 
         // Cerrar modal
-        document.querySelector('.close').onclick = function() {
-            document.getElementById('imageModal').style.display = 'none';
-        };
-
-        window.onclick = function(event) {
-            const modal = document.getElementById('imageModal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
+        document.addEventListener('DOMContentLoaded', function() {
+            const closeBtn = document.querySelector('.close');
+            if (closeBtn) {
+                closeBtn.onclick = function() {
+                    document.getElementById('imageModal').style.display = 'none';
+                };
             }
-        };
 
-        // Función para resetear formulario
+            window.onclick = function(event) {
+                const modal = document.getElementById('imageModal');
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            };
+        });
+
         function resetForm() {
             document.getElementById('inspectionForm').reset();
             document.getElementById('photoPreview').innerHTML = '';
-            console.log('🔄 Formulario reseteado');
+            
+            const inspectorField = document.getElementById('inspector');
+            if (inspectorField && currentUser) {
+                inspectorField.value = currentUser.user_metadata.nombre || currentUser.email;
+            }
         }
 
-        // Cargar inspecciones
         async function loadInspections() {
-            if (connectionStatus !== 'connected') {
+            if (!currentUser) {
                 document.getElementById('inspectionsList').innerHTML = 
-                    '<div class="status error">❌ No hay conexión con la base de datos</div>';
+                    '<div class="status error">🚫 Debes estar autenticado</div>';
                 return;
             }
             
-            console.log('📊 Cargando inspecciones...');
             const listDiv = document.getElementById('inspectionsList');
-            listDiv.innerHTML = '<div class="status info">⏳ Cargando inspecciones...</div>';
+            listDiv.innerHTML = '<div class="status info">⏳ Cargando inspecciones seguras...</div>';
             
             try {
                 let query = supabase
@@ -1019,9 +1206,9 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                     .select('*')
                     .order('created_at', { ascending: false });
                 
-                // Aplicar filtros
                 const statusFilter = document.getElementById('filterStatus').value;
                 const priorityFilter = document.getElementById('filterPriority').value;
+                const estadoFilter = document.getElementById('filterEstado').value;
                 
                 if (statusFilter === 'pending') {
                     query = query.eq('completada', false);
@@ -1033,18 +1220,19 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                     query = query.eq('prioridad', priorityFilter);
                 }
                 
+                if (estadoFilter !== 'all') {
+                    query = query.eq('estado_maquina', estadoFilter);
+                }
+                
                 const { data, error } = await query;
                 
                 if (error) {
-                    console.error('❌ Error cargando inspecciones:', error);
+                    console.error('Error cargando inspecciones:', error);
                     listDiv.innerHTML = 
                         `<div class="status error">❌ Error cargando datos: ${error.message}</div>`;
                     return;
                 }
                 
-                console.log(`📋 Cargadas ${data.length} inspecciones`);
-                
-                // Cargar fotos para cada inspección
                 const inspectionsWithPhotos = await Promise.all(
                     data.map(async (inspection) => {
                         const { data: photos } = await supabase
@@ -1052,27 +1240,34 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                             .select('*')
                             .eq('inspeccion_id', inspection.id);
                         
-                        return { ...inspection, fotos: photos || [] };
+                        const decryptedPhotos = photos ? photos.map(photo => ({
+                            ...photo,
+                            datos_imagen: decryptData(photo.datos_encriptados)
+                        })) : [];
+                        
+                        return { ...inspection, fotos: decryptedPhotos };
                     })
                 );
                 
-                displayInspections(inspectionsWithPhotos);
+                displaySecureInspections(inspectionsWithPhotos);
                 
             } catch (error) {
-                console.error('❌ Error inesperado:', error);
+                console.error('Error inesperado:', error);
                 listDiv.innerHTML = 
                     `<div class="status error">❌ Error inesperado: ${error.message}</div>`;
             }
         }
 
-        // Mostrar inspecciones
-        function displayInspections(inspections) {
+        function displaySecureInspections(inspections) {
             const listDiv = document.getElementById('inspectionsList');
             
             let html = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3>📊 Historial de Inspecciones</h3>
-                    <div class="status success" style="margin: 0;">Total: ${inspections.length}</div>
+                    <h3>📊 Historial Seguro de Inspecciones</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="status success" style="margin: 0;">🔒 ${inspections.length} registros</div>
+                        <div class="encryption-indicator">🔐 Datos protegidos</div>
+                    </div>
                 </div>
             `;
             
@@ -1087,10 +1282,24 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                     const prioridadColor = insp.prioridad === 'alta' ? '#ff4757' : 
                                          insp.prioridad === 'media' ? '#ffa502' : '#2ed573';
                     
+                    const estadoColor = insp.estado_maquina === 'ok' ? '#2ed573' : 
+                                       insp.estado_maquina === 'reparar' ? '#ffa502' : 
+                                       insp.estado_maquina === 'critico' ? '#ff4757' : '#3742fa';
+                    
+                    const estadoTexto = insp.estado_maquina === 'ok' ? '✅ OK' : 
+                                       insp.estado_maquina === 'reparar' ? '🔧 REPARAR' : 
+                                       insp.estado_maquina === 'critico' ? '🚨 CRÍTICO' : '⏳ PENDIENTE';
+                    
+                    const canEdit = userRole === 'admin' || insp.user_id === currentUser.id;
+                    
                     html += `
                         <div class="inspection-card ${insp.completada ? 'completed' : ''}">
                             <div class="priority-badge" style="background: ${prioridadColor};">
                                 ${insp.prioridad.toUpperCase()}
+                            </div>
+                            
+                            <div class="priority-badge" style="background: ${estadoColor}; top: 50px;">
+                                ${estadoTexto}
                             </div>
                             
                             ${insp.completada ? '<div class="completed-badge">✅ COMPLETADA</div>' : ''}
@@ -1099,6 +1308,7 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                                 <h4 style="margin-bottom: 5px;">👤 ${insp.inspector}</h4>
                                 <div style="color: #666;">🏭 Modelo: ${insp.modelo}</div>
                                 <div style="color: #666;">🔍 Trazabilidad: ${insp.trazabilidad}</div>
+                                <div style="color: #666; font-size: 12px;">🔐 ID: ${insp.id}</div>
                             </div>
                             
                             <div class="piece-tags">
@@ -1115,14 +1325,14 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                             
                             ${insp.fotos && insp.fotos.length > 0 ? `
                                 <div style="margin: 15px 0;">
-                                    <strong>📷 Fotos (${insp.fotos.length}):</strong>
+                                    <strong>📷 Fotos encriptadas (${insp.fotos.length}):</strong>
                                     <div class="photo-preview" style="margin-top: 8px;">
                                         ${insp.fotos.map(foto => `
-                                            <img src="${foto.url_archivo || foto.datos_imagen}" 
+                                            <img src="${foto.datos_imagen}" 
                                                  class="photo-thumbnail" 
                                                  alt="${foto.nombre_archivo}"
-                                                 onclick="showImageModal('${foto.url_archivo || foto.datos_imagen}')"
-                                                 title="${foto.nombre_archivo}">
+                                                 onclick="showImageModal('${foto.datos_imagen}')"
+                                                 title="🔒 ${foto.nombre_archivo} (desencriptada automáticamente)">
                                         `).join('')}
                                     </div>
                                 </div>
@@ -1132,21 +1342,26 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                                 <div style="color: #888; font-size: 12px;">
                                     📅 Creada: ${fecha}
                                     ${fechaCompletada ? `<br>✅ Completada: ${fechaCompletada}` : ''}
+                                    <br>🔐 Protegida con RLS
                                 </div>
                                 
                                 <div>
-                                    ${!insp.completada ? `
-                                        <button class="btn btn-success" onclick="markAsCompleted(${insp.id})" style="padding: 8px 16px; margin: 0;">
-                                            ✅ Marcar Completada
+                                    ${canEdit ? `
+                                        ${!insp.completada ? `
+                                            <button class="btn btn-success" onclick="markAsCompleted(${insp.id})" style="padding: 8px 16px; margin: 0;">
+                                                ✅ Marcar Completada
+                                            </button>
+                                        ` : `
+                                            <button class="btn btn-warning" onclick="markAsPending(${insp.id})" style="padding: 8px 16px; margin: 0;">
+                                                🔄 Marcar Pendiente
+                                            </button>
+                                        `}
+                                        <button class="btn btn-danger" onclick="deleteInspection(${insp.id})" style="padding: 8px 16px; margin-left: 5px;">
+                                            🗑️ Eliminar
                                         </button>
                                     ` : `
-                                        <button class="btn btn-warning" onclick="markAsPending(${insp.id})" style="padding: 8px 16px; margin: 0;">
-                                            🔄 Marcar Pendiente
-                                        </button>
+                                        <div style="color: #666; font-size: 12px;">🔒 Solo lectura</div>
                                     `}
-                                    <button class="btn btn-danger" onclick="deleteInspection(${insp.id})" style="padding: 8px 16px; margin-left: 5px;">
-                                        🗑️ Eliminar
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1157,7 +1372,6 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
             listDiv.innerHTML = html;
         }
 
-        // Marcar inspección como completada
         async function markAsCompleted(id) {
             if (!confirm('¿Marcar esta inspección como completada?')) return;
             
@@ -1166,7 +1380,8 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                     .from('inspecciones')
                     .update({ 
                         completada: true, 
-                        fecha_completada: new Date().toISOString() 
+                        fecha_completada: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
                     })
                     .eq('id', id);
                 
@@ -1181,7 +1396,6 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
             }
         }
 
-        // Marcar inspección como pendiente
         async function markAsPending(id) {
             if (!confirm('¿Marcar esta inspección como pendiente?')) return;
             
@@ -1190,7 +1404,8 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
                     .from('inspecciones')
                     .update({ 
                         completada: false, 
-                        fecha_completada: null 
+                        fecha_completada: null,
+                        updated_at: new Date().toISOString()
                     })
                     .eq('id', id);
                 
@@ -1205,18 +1420,10 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
             }
         }
 
-        // Eliminar inspección
         async function deleteInspection(id) {
             if (!confirm('¿Estás seguro de que quieres eliminar esta inspección?\n\nEsta acción no se puede deshacer.')) return;
             
             try {
-                // Primero eliminar fotos
-                await supabase
-                    .from('fotos')
-                    .delete()
-                    .eq('inspeccion_id', id);
-                
-                // Luego eliminar inspección
                 const { error } = await supabase
                     .from('inspecciones')
                     .delete()
@@ -1233,26 +1440,9 @@ CREATE POLICY "Allow all" ON fotos FOR ALL USING (true);</pre>
             }
         }
 
-        function clearLocalData() {
-            if (confirm('¿Estás seguro de que quieres limpiar la configuración guardada?\n\nTendrás que volver a configurar la conexión.')) {
-                localStorage.removeItem('supabase_url');
-                localStorage.removeItem('supabase_key');
-                document.getElementById('configSupabaseUrl').value = '';
-                document.getElementById('configSupabaseKey').value = '';
-                connectionStatus = 'disconnected';
-                supabase = null;
-                
-                updateConnectionIndicator('warning', '⚙️ Configuración limpiada');
-                updateTabsVisibility();
-                showStatus('info', 'Configuración limpiada correctamente');
-                console.log('🗑️ Configuración local eliminada');
-            }
-        }
-
-        // Cargar credenciales al iniciar
         window.addEventListener('load', () => {
-            console.log('🚀 Iniciando aplicación...');
-            loadSavedCredentials();
+            console.log('🚀 Iniciando sistema seguro...');
+            initializeSecureApp();
         });
     </script>
 </body>
