@@ -51,7 +51,7 @@
             color: #333;
         }
 
-        input, select {
+        input, select, textarea {
             width: 100%;
             padding: 12px;
             border: 2px solid #e1e5e9;
@@ -60,7 +60,7 @@
             transition: border-color 0.3s;
         }
 
-        input:focus, select:focus {
+        input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -79,6 +79,11 @@
 
         .btn:hover:not(:disabled) {
             transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .btn-success {
@@ -112,6 +117,12 @@
             background: #cce7ff;
             color: #0056b3;
             border: 1px solid #b3d9ff;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
         }
 
         .hidden {
@@ -243,6 +254,82 @@
         .notification.error { background: #dc3545; }
         .notification.warning { background: #ffc107; color: #000; }
         .notification.info { background: #17a2b8; }
+
+        .step-navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .photo-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .photo-item {
+            position: relative;
+            display: inline-block;
+        }
+
+        .photo-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+        }
+
+        .photo-item .remove-btn {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 10px 0;
+            transition: background-color 0.3s;
+        }
+
+        .upload-area:hover {
+            background-color: #f8f9ff;
+        }
+
+        .progress-indicator {
+            text-align: center;
+            margin: 15px 0;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .verification-result {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .verification-result .btn {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -256,7 +343,7 @@
         <div class="login-form">
             <h3 style="text-align: center; margin-bottom: 30px;">🔐 Acceso al Sistema</h3>
             
-            <div id="loginTabs" style="display: flex; margin-bottom: 20px;">
+            <div style="display: flex; margin-bottom: 20px;">
                 <button class="btn" onclick="showLoginTab('signin')" id="signinTab" style="flex: 1; margin: 0 5px;">Entrar</button>
                 <button class="btn" onclick="showLoginTab('signup')" id="signupTab" style="flex: 1; margin: 0 5px;">Registrarse</button>
             </div>
@@ -356,9 +443,10 @@
         </div>
 
         <div class="tabs">
-            <div class="tab active" onclick="showTab('home')" id="homeTab">🏠 Inicio</div>
-            <div class="tab" onclick="showTab('workflow')" id="workflowTab">🔧 Workflow</div>
-            <div class="tab" onclick="showTab('history')" id="historyTab">📊 Historial</div>
+            <div class="tab active" onclick="showTab('home')">🏠 Inicio</div>
+            <div class="tab" onclick="showTab('workflow')">🔧 Workflow</div>
+            <div class="tab" onclick="showTab('final')">📋 Inspección Final</div>
+            <div class="tab" onclick="showTab('history')">📊 Historial</div>
         </div>
 
         <!-- Pestaña Inicio -->
@@ -425,7 +513,7 @@
         <div id="workflow-tab" class="tab-content">
             <div class="workflow-section">
                 <h3>🔧 Workflow de Inspección</h3>
-                <p>Sistema paso a paso</p>
+                <p>Sistema paso a paso con verificaciones detalladas</p>
                 
                 <div class="section-selector">
                     <h4>🏭 Paso 1: Seleccionar Plataforma</h4>
@@ -460,6 +548,20 @@
                         <button class="btn btn-success" onclick="startWorkflow()" style="margin-top: 15px;">🚀 Iniciar Inspección</button>
                     </div>
                 </div>
+
+                <!-- Área del workflow paso a paso -->
+                <div id="workflowSteps" style="display: none;">
+                    <div class="config-section">
+                        <h4 id="stepTitle">Verificación paso a paso</h4>
+                        <div class="progress-indicator">
+                            <span id="currentStep">1</span> de <span id="totalSteps">6</span>
+                        </div>
+                        
+                        <!-- Imagen de referencia -->
+                        <div style="text-align: center; margin: 20px 0;">
+                    <button class="btn btn-success" onclick="saveFinalInspection()" style="font-size: 1.1em; padding: 15px 30px;">📝 Guardar Inspección Final</button>
+                    <button class="btn" onclick="resetFinalForm()">🔄 Limpiar</button>
+                </div>
             </div>
         </div>
 
@@ -480,11 +582,20 @@
     </div>
 
     <script>
+        // Variables globales
         let supabase = null;
         let currentUser = null;
         let userRole = null;
         let supabaseConfigured = false;
 
+        // Variables para el workflow detallado
+        let currentWorkflowStep = 0;
+        let workflowStepsData = [];
+        let currentStepResults = [];
+        let selectedPlatform = '';
+        let selectedSection = '';
+
+        // Configuración de plataformas
         const PLATFORMS = {
             SG3x: {
                 name: "SG3x - Siemens Gamesa",
@@ -500,6 +611,49 @@
             }
         };
 
+        // Datos de verificaciones con las imágenes
+        const VERIFICATION_IMAGES = {
+            lateral_izquierdo: [
+                {
+                    id: 1,
+                    title: "COTA 1",
+                    description: "Verificar medidas 955±5mm y 270±5mm. Anotar 1(SI) 0(NO) en Cota 1",
+                    image: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkNPVEEgMSAtIDk1NcKxNW1tIC8gMjcwwrE1bW08L3RleHQ+Cjwvc3ZnPg=="
+                },
+                {
+                    id: 2,
+                    title: "POSICIÓN BURLETES",
+                    description: "ATENCIÓN POSICIÓN BURLETES SUPERIOR E INFERIOR. Aplicar silicona en toda la longitud de la junta guardacantos de la parte inferior. Aplicar Loctite en los extremos de la goma.",
+                    image: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI0MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkJVUkxFVEVTPC90ZXh0PgogIDx0ZXh0IHg9IjUwJSIgeT0iNjAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiMzMzMiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5TdXBlcmlvciBlIEluZmVyaW9yPC90ZXh0Pgo8L3N2Zz4="
+                },
+                {
+                    id: 3,
+                    title: "UTIL DE MONTAJE R050",
+                    description: "Utilizar el util de montaje R050 en posiciones 1, 2 y 3. Verificar correcta colocación según el plano.",
+                    image: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI0MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlVUSUwgUjA1MDwvdGV4dD4KICA8dGV4dCB4PSI1MCUiIHk9IjYwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSIjMzMzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UG9zaWNpb25lcyAxLCAyIHkgMzwvdGV4dD4KPC9zdmc+"
+                },
+                {
+                    id: 4,
+                    title: "COMPROBAR COTAS GP365193",
+                    description: "Comprobar cotas GP365193. Verificar dimensiones 330mm y 144,2mm según plano técnico.",
+                    image: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI0MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkdQMzY1MTkzPC90ZXh0PgogIDx0ZXh0IHg9IjUwJSIgeT0iNjAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiMzMzMiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj4zMzBtbSB5IDE0NCwybW08L3RleHQ+Cjwvc3ZnPg=="
+                },
+                {
+                    id: 5,
+                    title: "COTAS DE PULTRUSIÓN",
+                    description: "Verificar cotas de pultrusión. Comprobar medidas 589, 2700mm en diferentes secciones según perfil 3D.",
+                    image: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI0MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlBVTFRSVVNJw5NOPC90ZXh0PgogIDx0ZXh0IHg9IjUwJSIgeT0iNjAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiMzMzMiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj41ODksIDI3MDBtbTwvdGV4dD4KPC9zdmc+"
+                },
+                {
+                    id: 6,
+                    title: "VERIFICACIÓN SOPORTES",
+                    description: "Comprobar distancia entre los soportes laterales superiores y los perfiles pultrusión (antes de pegarlos). Medida: 2237 (+10/-0) mm",
+                    image: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI0MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlNPUE9SVEVTPC90ZXh0PgogIDx0ZXh0IHg9IjUwJSIgeT0iNjAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiMzMzMiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj4yMjM3ICgrMTAvLTApIG1tPC90ZXh0Pgo8L3N2Zz4="
+                }
+            ]
+        };
+
+        // Funciones de utilidades
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
             notification.className = `notification ${type}`;
@@ -523,6 +677,7 @@
             });
         }
 
+        // Funciones de inicialización
         async function initializeApp() {
             try {
                 await loadSupabase();
@@ -562,6 +717,7 @@
             }
         }
 
+        // Funciones de navegación entre pantallas
         function showLoginScreen() {
             document.getElementById('loginScreen').classList.remove('hidden');
             document.getElementById('configScreen').classList.add('hidden');
@@ -580,6 +736,7 @@
             document.getElementById('mainApp').classList.remove('hidden');
         }
 
+        // Funciones de autenticación
         function showLoginTab(tab) {
             const signinForm = document.getElementById('signinForm');
             const signupForm = document.getElementById('signupForm');
@@ -682,6 +839,11 @@
             if (inspectorField) {
                 inspectorField.value = user.user_metadata.nombre || user.email;
             }
+
+            const finalInspectorField = document.getElementById('finalInspector');
+            if (finalInspectorField) {
+                finalInspectorField.value = user.user_metadata.nombre || user.email;
+            }
             
             showNotification('✅ Bienvenido al sistema', 'success');
         }
@@ -706,6 +868,7 @@
             }
         }
 
+        // Funciones de configuración
         function showConfig() {
             showConfigScreen();
             
@@ -781,6 +944,7 @@
             }
         }
 
+        // Funciones de navegación de pestañas
         function showTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -797,9 +961,11 @@
             const tabs = document.querySelectorAll('.tab');
             if (tabName === 'home') tabs[0].classList.add('active');
             else if (tabName === 'workflow') tabs[1].classList.add('active');
-            else if (tabName === 'history') tabs[2].classList.add('active');
+            else if (tabName === 'final') tabs[2].classList.add('active');
+            else if (tabName === 'history') tabs[3].classList.add('active');
         }
 
+        // Funciones del workflow
         function loadPlatform() {
             const platformId = document.getElementById('platformSelector').value;
             
@@ -809,6 +975,7 @@
                 return;
             }
 
+            selectedPlatform = platformId;
             const platform = PLATFORMS[platformId];
             if (!platform) {
                 showNotification('⚠️ Plataforma no disponible', 'warning');
@@ -843,6 +1010,7 @@
                 return;
             }
 
+            selectedSection = sectionId;
             document.getElementById('workflowContent').style.display = 'block';
             showNotification('📋 Sección seleccionada. Completa los datos para continuar.', 'info');
         }
@@ -855,13 +1023,264 @@
                 return;
             }
 
-            showNotification('🚀 Workflow iniciado (funcionalidad completa próximamente)', 'info');
+            if (!selectedPlatform || !selectedSection) {
+                showNotification('⚠️ Selecciona plataforma y sección', 'warning');
+                return;
+            }
+
+            // Cargar datos del workflow
+            if (VERIFICATION_IMAGES[selectedSection]) {
+                workflowStepsData = VERIFICATION_IMAGES[selectedSection];
+                currentWorkflowStep = 0;
+                currentStepResults = [];
+
+                // Inicializar resultados
+                workflowStepsData.forEach(() => {
+                    currentStepResults.push({
+                        resultado: null,
+                        operario: '',
+                        observaciones: '',
+                        fotos: []
+                    });
+                });
+
+                // Mostrar workflow paso a paso
+                document.getElementById('workflowContent').style.display = 'none';
+                document.getElementById('workflowSteps').style.display = 'block';
+                
+                loadCurrentStep();
+                showNotification('🚀 Workflow iniciado', 'success');
+            } else {
+                showNotification('⚠️ Esta sección aún no está implementada', 'warning');
+            }
         }
 
-        window.addEventListener('load', () => {
-            console.log('🚀 Iniciando sistema...');
-            initializeApp();
-        });
-    </script>
-</body>
-</html>
+        function loadCurrentStep() {
+            const step = workflowStepsData[currentWorkflowStep];
+            const result = currentStepResults[currentWorkflowStep];
+
+            document.getElementById('stepTitle').textContent = step.title;
+            document.getElementById('currentStep').textContent = currentWorkflowStep + 1;
+            document.getElementById('totalSteps').textContent = workflowStepsData.length;
+            document.getElementById('referenceImage').src = step.image;
+            document.getElementById('referenceImage').alt = step.title;
+
+            // Descripción como tooltip
+            document.getElementById('referenceImage').title = step.description;
+
+            // Restaurar estado anterior
+            document.getElementById('resultOK').classList.toggle('btn-success', result.resultado === 1);
+            document.getElementById('resultNOK').classList.toggle('btn-danger', result.resultado === 0);
+            document.getElementById('operarioSelector').value = result.operario;
+            document.getElementById('stepObservaciones').value = result.observaciones;
+
+            updateStepPhotos();
+            updateStepNavigation();
+        }
+
+        function setResult(resultado) {
+            currentStepResults[currentWorkflowStep].resultado = resultado;
+            
+            document.getElementById('resultOK').classList.toggle('btn-success', resultado === 1);
+            document.getElementById('resultNOK').classList.toggle('btn-danger', resultado === 0);
+            document.getElementById('resultOK').classList.toggle('btn', resultado !== 1);
+            document.getElementById('resultNOK').classList.toggle('btn', resultado !== 0);
+
+            updateStepNavigation();
+        }
+
+        function setOperario() {
+            const operario = document.getElementById('operarioSelector').value;
+            currentStepResults[currentWorkflowStep].operario = operario;
+            updateStepNavigation();
+        }
+
+        function saveObservation() {
+            const observaciones = document.getElementById('stepObservaciones').value;
+            currentStepResults[currentWorkflowStep].observaciones = observaciones;
+        }
+
+        function updateStepNavigation() {
+            const result = currentStepResults[currentWorkflowStep];
+            const isComplete = result.resultado !== null && result.operario !== '';
+            
+            document.getElementById('nextStepBtn').disabled = !isComplete;
+            document.getElementById('prevStepBtn').disabled = currentWorkflowStep === 0;
+            
+            const validation = document.getElementById('stepValidation');
+            if (!isComplete) {
+                validation.textContent = 'Completa resultado y operario para continuar';
+            } else {
+                validation.textContent = '';
+            }
+        }
+
+        function nextStep() {
+            if (currentWorkflowStep < workflowStepsData.length - 1) {
+                currentWorkflowStep++;
+                loadCurrentStep();
+            } else {
+                // Mostrar resumen final
+                showWorkflowSummary();
+            }
+        }
+
+        function previousStep() {
+            if (currentWorkflowStep > 0) {
+                currentWorkflowStep--;
+                loadCurrentStep();
+            }
+                            <img id="referenceImage" src="" alt="Imagen de referencia" style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid #ddd;">
+                        </div>
+
+                        <!-- Controles de verificación -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+                            <div class="config-section">
+                                <h4>✅ Resultado</h4>
+                                <div class="verification-result">
+                                    <button class="btn" onclick="setResult(1)" id="resultOK">1 (SI) ✅</button>
+                                    <button class="btn" onclick="setResult(0)" id="resultNOK">0 (NO) ❌</button>
+                                </div>
+                            </div>
+                            <div class="config-section">
+                                <h4>👤 Operario</h4>
+                                <select id="operarioSelector" onchange="setOperario()">
+                                    <option value="">Seleccionar operario...</option>
+                                    <option value="001">Operario 001</option>
+                                    <option value="002">Operario 002</option>
+                                    <option value="003">Operario 003</option>
+                                    <option value="004">Operario 004</option>
+                                    <option value="005">Operario 005</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Observaciones -->
+                        <div class="form-group">
+                            <label>📝 Observaciones (opcional):</label>
+                            <textarea id="stepObservaciones" rows="3" placeholder="Comentarios sobre esta verificación..." onchange="saveObservation()"></textarea>
+                        </div>
+
+                        <!-- Fotos de evidencia -->
+                        <div class="form-group">
+                            <label>📷 Fotos de evidencia (opcional):</label>
+                            <div class="upload-area">
+                                <input type="file" id="stepPhotos" multiple accept="image/*" style="display: none;" onchange="handleStepPhotos(event)">
+                                <button type="button" class="btn" onclick="document.getElementById('stepPhotos').click()">📁 Seleccionar Fotos</button>
+                                <p style="margin: 10px 0; color: #666;">Arrastra fotos aquí o haz clic para seleccionar</p>
+                            </div>
+                            <div id="stepPhotoPreview" class="photo-preview"></div>
+                        </div>
+
+                        <!-- Navegación -->
+                        <div class="step-navigation">
+                            <button class="btn" onclick="previousStep()" id="prevStepBtn" disabled>⬅️ Anterior</button>
+                            <div style="text-align: center;">
+                                <div id="stepValidation" style="color: #dc3545; font-weight: bold; margin: 10px 0;"></div>
+                            </div>
+                            <button class="btn btn-success" onclick="nextStep()" id="nextStepBtn" disabled>Siguiente ➡️</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumen final del workflow -->
+                <div id="workflowSummary" style="display: none;">
+                    <div class="stats-card">
+                        <h4>✅ Inspección Completada</h4>
+                        <div id="summaryContent"></div>
+                        <button class="btn btn-success" onclick="saveWorkflowResults()" style="margin: 20px 10px;">📝 Guardar Resultados</button>
+                        <button class="btn" onclick="resetWorkflow()">🔄 Nueva Inspección</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña Inspección Final -->
+        <div id="final-tab" class="tab-content">
+            <div class="workflow-section">
+                <h3>📋 Inspección Final</h3>
+                <p>Resumen general de la turbina después de completar todas las secciones</p>
+                
+                <div class="config-section">
+                    <h4>👤 Inspector Principal</h4>
+                    <input type="text" id="finalInspector" readonly>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label>🏭 Modelo de Turbina:</label>
+                        <select id="finalModelo" required>
+                            <option value="">Seleccionar modelo...</option>
+                            <option value="SG3x">SG3x</option>
+                            <option value="SG4x">SG4x</option>
+                            <option value="G8X">G8X</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>🔍 Número de Trazabilidad:</label>
+                        <input type="text" id="finalTrazabilidad" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>🔧 Secciones Completadas:</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 10px 0;">
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <input type="checkbox" name="finalSecciones" value="Lateral Izquierdo">
+                            <span>🔧 Lateral Izquierdo</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <input type="checkbox" name="finalSecciones" value="Lateral Derecho">
+                            <span>🔧 Lateral Derecho</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <input type="checkbox" name="finalSecciones" value="Módulo">
+                            <span>⚙️ Módulo</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                            <input type="checkbox" name="finalSecciones" value="Trasera">
+                            <span>🔧 Trasera</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label>🚨 Prioridad:</label>
+                        <select id="finalPrioridad" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="alta">🔴 Alta</option>
+                            <option value="media">🟡 Media</option>
+                            <option value="baja">🟢 Baja</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>✅ Estado Final:</label>
+                        <select id="finalEstado" required>
+                            <option value="">Seleccionar estado...</option>
+                            <option value="ok">✅ OK - Lista para operación</option>
+                            <option value="reparar">🔧 Necesita reparaciones</option>
+                            <option value="critico">🚨 Estado crítico</option>
+                            <option value="pendiente">⏳ Pendiente revisión</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>📝 Resumen Final:</label>
+                    <textarea id="finalObservaciones" rows="4" placeholder="Resumen general, observaciones importantes, recomendaciones..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>📷 Fotos Finales:</label>
+                    <div class="upload-area">
+                        <input type="file" id="finalPhotos" multiple accept="image/*" style="display: none;" onchange="handleFinalPhotos(event)">
+                        <button type="button" class="btn" onclick="document.getElementById('finalPhotos').click()">📁 Seleccionar Fotos</button>
+                        <p style="margin: 10px 0; color: #666;">Fotos del estado final de la turbina</p>
+                    </div>
+                    <div id="finalPhotoPreview" class="photo-preview"></div>
+                </div>
+
+                <div style="text-align: center; margin: 20px 0;">
